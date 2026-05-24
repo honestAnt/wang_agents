@@ -18,6 +18,7 @@
         <module>user-service</module>
         <module>model-service</module>
         <module>rag-service</module>
+        <module>tool-service</module>
     </modules>
 
     <properties>
