@@ -23,6 +23,8 @@
         <module>gateway-service</module>
         <module>trace-service</module>
         <module>skill-service</module>
+        <module>memory-service</module>
+        <module>prompt-service</module>
     </modules>
 
     <properties>
