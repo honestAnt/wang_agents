@@ -55,7 +55,109 @@ importers:
         specifier: ^5.5.0
         version: 5.9.3
 
+  apps/agent-studio:
+    dependencies:
+      '@enterprise-ai/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@enterprise-ai/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@enterprise-ai/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@enterprise-ai/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      next:
+        specifier: ^15.0.0
+        version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.6(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.15
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.15)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
   apps/chat-ui:
+    dependencies:
+      '@enterprise-ai/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@enterprise-ai/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@enterprise-ai/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@enterprise-ai/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      next:
+        specifier: ^15.0.0
+        version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.6(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.15
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.15)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  apps/rag-studio:
+    dependencies:
+      '@enterprise-ai/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@enterprise-ai/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@enterprise-ai/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui-components
+      '@enterprise-ai/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      next:
+        specifier: ^15.0.0
+        version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.6(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.15
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.15)
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  apps/trace-console:
     dependencies:
       '@enterprise-ai/api-client':
         specifier: workspace:*

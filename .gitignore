@@ -46,7 +46,6 @@ next-env.d.ts
 .playwright-mcp/
 
 dev-map
-dev-task
 
 # Java
 *.class

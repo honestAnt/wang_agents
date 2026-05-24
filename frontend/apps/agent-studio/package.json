@@ -1,0 +1,25 @@
+{
+  "name": "agent-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@enterprise-ai/auth": "workspace:*",
+    "@enterprise-ai/api-client": "workspace:*",
+    "@enterprise-ai/ui": "workspace:*",
+    "@enterprise-ai/utils": "workspace:*",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.0"
+  }
+}

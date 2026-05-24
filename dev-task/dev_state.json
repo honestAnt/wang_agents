@@ -1,0 +1,708 @@
+{
+  "project": "企业级智能体平台 (Enterprise Agent Platform)",
+  "phase": "planning",
+  "lastUpdated": "2026-05-24T19:45:00+08:00",
+  "status": "phase 1 completed, ready for phase 2",
+  "completed": [
+    "PRD documentation (dev-map/企业智能体prd.docx)",
+    "Technical architecture design (dev-map/企业智能体技术架构.docx)",
+    "UI/UX page design (dev-map/企业智能体页面设计.docx)",
+    "Monorepo directory structure plan (dev-map/企业智能体工程目录实现.docx)",
+    "Dotfiles setup (.env, .gitignore, .gitattributes, .dockerignore)",
+    "CLAUDE.md initialization",
+    "Task breakdown",
+    "README.md (English)",
+    "README.zh-CN.md (Chinese)"
+  ],
+
+  "phases": {
+
+    "phase1_mvp": {
+      "name": "Phase 1 — MVP (Chat + RAG + Tool + Multi-tenant + Model)",
+      "goal": "多租户 AI 聊天平台，支持基础 RAG、Tool 调用、多模型切换",
+      "status": "completed",
+      "tasks": {
+
+        "task-1.1": {
+          "title": "Monorepo 初始化 + 基础设施 Docker Compose",
+          "description": "创建 monorepo 顶层结构（frontend/ backend-java/ agent-python/ sdk/ infra/ shared/ deploy/ scripts/），编写 docker-compose.yml 启动本地依赖服务",
+          "subtasks": [
+            "创建 monorepo 所有顶层目录及 .gitkeep",
+            "编写 docker-compose.yml：PostgreSQL 15、Redis 7、MinIO、Qdrant、OpenSearch",
+            "创建 .env.example 模板（去除真实密钥）",
+            "编写 scripts/init-local.sh 一键初始化脚本（检查依赖、启动容器、初始化数据库）",
+            "验证所有容器健康启动，连通性测试通过"
+          ],
+          "files": ["deploy/docker-compose.yml", "scripts/init-local.sh", ".env.example"],
+          "dependsOn": [],
+          "status": "completed"
+        },
+
+        "task-1.2": {
+          "title": "Shared 协议层：OpenAPI / Proto / Trace Schema / Event Schema",
+          "description": "定义所有微服务间的通信契约，包括 REST API schema、gRPC proto、Kafka 事件 schema、Trace span 结构",
+          "subtasks": [
+            "编写 shared/trace-model/trace_schema.json — 统一 Trace Span 模型（trace_id, span_id, parent_id, type, latency, cost, tenant_id）",
+            "编写 shared/openapi/ 下各服务 REST API 契约草稿（chat, agent, tool, model, rag, skill, trace）",
+            "编写 shared/proto/ 下 Java ↔ Python 关键 gRPC 接口定义",
+            "编写 shared/event-schema/ 下 Kafka 事件结构（agent.step, tool.call, rag.retrieval, llm.call）"
+          ],
+          "files": ["shared/trace-model/", "shared/openapi/", "shared/proto/", "shared/event-schema/"],
+          "dependsOn": [],
+          "status": "completed"
+        },
+
+        "task-1.3": {
+          "title": "backend-java/common-lib 公共库",
+          "description": "所有 Java 微服务共享的依赖模块：统一异常处理、统一响应体、JWT 工具、Feign 拦截器、Kafka 基础配置、Trace 工具",
+          "subtasks": [
+            "初始化 Spring Boot 项目，配置 Maven parent POM（版本管理）",
+            "实现统一响应体 ApiResponse<T> 和全局异常处理器 GlobalExceptionHandler",
+            "实现 JWT 工具类（解析 token、提取 tenant_id/user_id/roles）",
+            "实现 Feign 拦截器（自动透传 JWT 和 trace_id）",
+            "实现 Kafka 基础配置（生产者/消费者模板）",
+            "实现 TraceSpan 基础模型和 ThreadLocal 上下文传递工具"
+          ],
+          "files": ["backend-java/common-lib/"],
+          "dependsOn": ["task-1.1", "task-1.2"],
+          "status": "completed"
+        },
+
+        "task-1.4": {
+          "title": "auth-service：Keycloak 集成 + JWT 认证",
+          "description": "集成 Keycloak 实现企业 IAM，提供登录/登出/token 刷新/用户信息接口",
+          "subtasks": [
+            "配置 Keycloak realm（enterprise-ai-platform），创建默认角色（SuperAdmin, TenantAdmin, Developer, Operator, User）",
+            "实现 Spring Security + OAuth2 Resource Server 配置",
+            "实现 /api/auth/login, /api/auth/logout, /api/auth/refresh, /api/auth/me 接口",
+            "实现 RBAC 权限注解（@PreAuthorize）和租户隔离过滤器（tenant_id）",
+            "支持 SSO / LDAP / OAuth2 多认证源配置"
+          ],
+          "files": ["backend-java/auth-service/"],
+          "dependsOn": ["task-1.3"],
+          "status": "completed"
+        },
+
+        "task-1.5": {
+          "title": "user-service：用户/租户/组织管理",
+          "description": "多租户用户管理，包括租户 CRUD、用户 CRUD、部门管理、角色绑定",
+          "subtasks": [
+            "设计 + Flyway 迁移数据库表：tenants, users, departments, user_roles",
+            "实现租户 CRUD API（/api/tenants）含配额字段",
+            "实现用户 CRUD API（/api/users）含部门关联",
+            "实现部门树 API（/api/departments）",
+            "实现角色绑定 API（/api/users/{id}/roles）",
+            "开发数据隔离中间件：所有 SQL 自动注入 tenant_id 过滤"
+          ],
+          "files": ["backend-java/user-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "completed"
+        },
+
+        "task-1.6": {
+          "title": "model-service：模型注册与治理（LiteLLM 控制面）",
+          "description": "模型接入管理，API Key 管理，Quota/Budget 控制，路由策略配置",
+          "subtasks": [
+            "设计 + 迁移表：models, model_providers, api_keys, quotas, budgets",
+            "实现模型注册 API（/api/models）— 支持 GPT, Claude, Gemini, Qwen, DeepSeek, vLLM, Ollama",
+            "实现 API Key 加密存储 + 管理 API",
+            "实现 Quota 管理（按租户/用户/Agent 限制 token/请求数）",
+            "实现 Budget 控制（月预算 + 超额策略：告警/阻断/降级）",
+            "实现模型路由配置（按 task 类型/用户级别路由到不同模型）",
+            "实现 fallback 策略链（GPT-4 → Claude → Qwen → DeepSeek）"
+          ],
+          "files": ["backend-java/model-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "completed"
+        },
+
+        "task-1.7": {
+          "title": "rag-service：知识库管理（LlamaIndex 控制面）",
+          "description": "文档上传/解析/分块/Embedding/索引管理，Hybrid Search API，权限过滤",
+          "subtasks": [
+            "设计 + 迁移表：knowledge_bases, documents, chunks, embedding_configs",
+            "实现知识库 CRUD API（/api/knowledge-bases）",
+            "实现文档上传 API（/api/knowledge-bases/{id}/documents）— PDF/Word/PPT/Excel/MD/HTML",
+            "实现文档解析 Pipeline 配置（OCR解析 → 结构化提取 → 语义清洗）",
+            "实现分块策略配置（固定大小/语义分块/递归分块/Markdown分块）",
+            "实现 Embedding 配置 API（选择模型、维度、batch size）",
+            "实现 BM25 + Vector + Metadata Filter 的 Hybrid Search API",
+            "实现权限感知过滤（tenant_id + department + role + project）",
+            "实现 Rerank 配置 API（BGE / Jina / CrossEncoder / Cohere）"
+          ],
+          "files": ["backend-java/rag-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "completed"
+        },
+
+        "task-1.8": {
+          "title": "tool-service：Tool Registry + MCP 管理",
+          "description": "统一工具注册中心，支持 HTTP/MCP/SDK 三种工具类型，含限流/熔断/超时/审计",
+          "subtasks": [
+            "设计 + 迁移表：tools, tool_schemas, tool_auth_configs, tool_rate_limits",
+            "实现 Tool 注册 API（/api/tools）— 提交 OpenAPI schema / JSON schema",
+            "实现 Tool 类型支持：HTTP Tool、MCP Tool、SDK Tool",
+            "实现 Tool 鉴权配置（API Key / OAuth / BasicAuth）",
+            "实现 Tool 限流配置（token bucket / sliding window）",
+            "实现 Tool 熔断配置（circuit breaker — 失败阈值/半开探测）",
+            "实现 Tool 超时 + 重试策略配置",
+            "实现 Tool 调用日志记录（入参/出参/latency/error）"
+          ],
+          "files": ["backend-java/tool-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "completed"
+        },
+
+        "task-1.9": {
+          "title": "agent-service：Agent 配置管理",
+          "description": "Agent 的 CRUD 管理，包括 Prompt 绑定、Tool/Skill 绑定、Memory 策略、模型绑定、权限配置",
+          "subtasks": [
+            "设计 + 迁移表：agents, agent_configs, agent_tool_bindings, agent_skill_bindings",
+            "实现 Agent CRUD API（/api/agents）",
+            "实现 Agent 配置 API：System Prompt、Tool 绑定、Skill 绑定、Memory 策略、模型绑定",
+            "实现 Agent 权限配置 API（哪些角色/用户可使用该 Agent）",
+            "实现 Agent 版本管理（Draft → Test → Published → Rollback）",
+            "实现 Agent 调试 API（提交测试消息，返回完整 trace）"
+          ],
+          "files": ["backend-java/agent-service/"],
+          "dependsOn": ["task-1.3", "task-1.6", "task-1.7", "task-1.8"],
+          "status": "completed"
+        },
+
+        "task-1.10": {
+          "title": "agent-python 核心：AgentScope Runtime + FastAPI",
+          "description": "Python Agent Runtime 核心，基于 AgentScope 实现 Agent 执行循环（reason → act → observe）",
+          "subtasks": [
+            "初始化 agent-python 项目结构（pyproject.toml / requirements.txt）",
+            "实现 FastAPI 入口 + 健康检查（app/main.py）",
+            "实现 AgentScope 集成封装（app/core/agent_engine/）— 继承 AgentScope Agent 类",
+            "实现 Planner 任务规划模块（app/core/planner/）— 输入分解为子任务",
+            "实现 Intent Router（app/core/router/）— 意图识别 → Skill 路由",
+            "实现 Tool Executor（app/core/executor/）— 调 Java tool-service / MCP client",
+            "实现 Context Builder（app/core/context/）— 组装 System Prompt + Memory + RAG 上下文",
+            "实现 Chat API（app/api/chat.py）— POST /chat 支持流式 SSE 输出",
+            "实现 LiteLLM Client 封装（app/llm/litellm_client.py）— 统一调用多模型",
+            "实现 Model Router（app/llm/model_router.py）— 按 task 类型/成本选模型",
+            "实现全链路 Trace 打点（app/trace/tracer.py）— 每个 span 记录 trace_id/span_id/type/latency/cost",
+            "编写 Dockerfile"
+          ],
+          "files": ["agent-python/"],
+          "dependsOn": ["task-1.2"],
+          "status": "completed"
+        },
+
+        "task-1.11": {
+          "title": "agent-python RAG 集成（LlamaIndex + Hybrid Search）",
+          "description": "在 Agent Runtime 中集成 RAG 能力：检索、Rerank、Embedding",
+          "subtasks": [
+            "实现 Retriever（app/rag/retriever.py）— 调 Java rag-service Hybrid Search API",
+            "实现 Reranker（app/rag/reranker.py）— BGE / CrossEncoder",
+            "实现 Embedding Client（app/rag/embedding.py）— 调用 embedding 模型生成向量",
+            "实现 Permission-Aware RAG — 检索时注入 tenant_id/department/role 过滤条件",
+            "实现 RAG 上下文注入 — 将检索结果格式化后注入 System Prompt"
+          ],
+          "files": ["agent-python/app/rag/"],
+          "dependsOn": ["task-1.7", "task-1.10"],
+          "status": "completed"
+        },
+
+        "task-1.12": {
+          "title": "agent-python Memory 系统（短期 + 长期）",
+          "description": "短期记忆（Redis session context）、长期记忆（PostgreSQL vector memory）",
+          "subtasks": [
+            "实现 ShortTermMemory（app/memory/short_term.py）— Redis 存储当前 session 对话历史，Sliding Context Window",
+            "实现 LongTermMemory（app/memory/long_term.py）— PostgreSQL 存储用户偏好/历史行为",
+            "实现 VectorMemory（app/memory/vector_memory.py）— 向量存储长期语义记忆，支持相似检索",
+            "实现 Memory 注入 — 读取近期对话 + 相关长期记忆注入 Prompt"
+          ],
+          "files": ["agent-python/app/memory/"],
+          "dependsOn": ["task-1.10"],
+          "status": "completed"
+        },
+
+        "task-1.13": {
+          "title": "gateway-service：API 网关",
+          "description": "基于 Spring Cloud Gateway 的统一入口，负责鉴权、限流、路由、请求日志",
+          "subtasks": [
+            "配置 Spring Cloud Gateway 路由规则（auth/user/agent/model/rag/tool/chat → 对应服务）",
+            "实现全局 JWT 鉴权过滤器（解析 token，注入 trace_id）",
+            "实现租户级限流（按 tenant_id + API path 限制 QPS）",
+            "实现请求日志记录（记录所有 API 调用的 latency/status/tenant_id/user_id）",
+            "实现 CORS 和安全头配置",
+            "实现 WebSocket 代理支持（用于 SSE streaming 透传）"
+          ],
+          "files": ["backend-java/gateway-service/"],
+          "dependsOn": ["task-1.3"],
+          "status": "completed"
+        },
+
+        "task-1.14": {
+          "title": "trace-service：追踪与审计（基础版）",
+          "description": "接收并存储所有服务的 Trace Span，提供会话查询和基础链路查看",
+          "subtasks": [
+            "设计 + 迁移表：trace_sessions, trace_spans, trace_llm_calls, trace_tool_calls, trace_rag_calls",
+            "实现 Span 接收 API（/api/trace/spans）— 批量写入 span",
+            "实现会话列表 API（/api/trace/sessions）— 支持用户/Agent/模型/时间/异常筛选",
+            "实现会话详情 API（/api/trace/sessions/{id}）— 完整对话流 + span 树",
+            "实现 Kafka 消费端 — 消费 agent.step / tool.call / rag.retrieval / llm.call 事件持久化",
+            "实现 Token 成本统计 API（按用户/Agent/模型/时间聚合）"
+          ],
+          "files": ["backend-java/trace-service/"],
+          "dependsOn": ["task-1.3"],
+          "status": "completed"
+        },
+
+        "task-1.15": {
+          "title": "frontend Monorepo 初始化 + UI 组件库",
+          "description": "初始化 Next.js 前端 monorepo（Turborepo），搭建共享 UI 组件库和 API Client",
+          "subtasks": [
+            "初始化 frontend/ Turborepo 项目（pnpm workspaces）",
+            "搭建 frontend/packages/ui-components/ — 共享 UI 组件库（基于 Ant Design Pro）",
+            "搭建 frontend/packages/api-client/ — 共享 API 调用客户端（axios + JWT 自动附带）",
+            "搭建 frontend/packages/auth/ — 共享认证模块（登录状态、JWT 管理、角色判断）",
+            "搭建 frontend/packages/utils/ — 工具函数（时间格式化、数字格式化、Markdown 渲染）",
+            "配置 ESLint + Prettier + TypeScript strict mode"
+          ],
+          "files": ["frontend/"],
+          "dependsOn": [],
+          "status": "completed"
+        },
+
+        "task-1.16": {
+          "title": "frontend 登录页 + 首次初始化页",
+          "description": "登录认证页面，支持用户名密码/SSO/MFA；首次初始化页引导创建租户和管理员",
+          "subtasks": [
+            "实现登录页 — 用户名密码 + SSO + 验证码 + 记住登录",
+            "实现 MFA 二次验证页",
+            "实现首次初始化页 — 三步向导：创建管理员 → 配置模型 → 配置存储/向量库",
+            "集成 Keycloak 登录流程（OAuth2 PKCE）"
+          ],
+          "files": ["frontend/apps/chat-ui/", "frontend/apps/admin-console/"],
+          "dependsOn": ["task-1.15", "task-1.4"],
+          "status": "completed"
+        },
+
+        "task-1.17": {
+          "title": "frontend 用户聊天工作台（Chat UI）",
+          "description": "企业员工日常 AI 工作入口 — 类似 ChatGPT 但具备企业知识+Tool+权限",
+          "subtasks": [
+            "实现聊天主界面 — 侧边栏（会话列表/收藏Agent/最近Skill）+ 主聊天区 + 输入框",
+            "实现多轮对话 + 流式 SSE 输出（Markdown/Code Highlight/Mermaid/Latex 渲染）",
+            "实现文件上传（PDF/Excel/图片/CSV/Word）并预览",
+            "实现模型切换下拉（GPT-4 / Claude / DeepSeek / Qwen）",
+            "实现 Agent 切换（实验室助手/客服助手/数据分析助手）",
+            "实现 Tool 执行状态展示（正在查询订单... 正在分析Excel... 正在搜索知识库...）",
+            "实现 RAG 引用展示（引用文档/chunk来源/页码/相似度）",
+            "实现会话记忆展示（AI 记住了什么，用户可删除）",
+            "实现 AI 建议推荐（推荐 Skills/Tool/Prompt）"
+          ],
+          "files": ["frontend/apps/chat-ui/"],
+          "dependsOn": ["task-1.15", "task-1.10"],
+          "status": "completed"
+        },
+
+        "task-1.18": {
+          "title": "frontend 管理后台 Dashboard",
+          "description": "租户管理员总览页：今日请求数、Token消耗、成本统计、活跃用户、趋势图",
+          "subtasks": [
+            "实现 Dashboard 首页布局 — 核心指标卡片 + 趋势图 + Top 榜单",
+            "实现 Token 趋势图 / 成本趋势图（ECharts/Recharts）",
+            "实现模型调用排行 / Tool 调用排行 / 热门问题 Top N",
+            "实现错误率监控面板",
+            "实现时间范围选择器（今日/本周/本月/自定义）"
+          ],
+          "files": ["frontend/apps/admin-console/"],
+          "dependsOn": ["task-1.15", "task-1.14"],
+          "status": "completed"
+        },
+
+        "task-1.19": {
+          "title": "frontend Agent 管理 + 模型管理页面",
+          "description": "Agent 配置（Prompt/Tool/Skill/Memory/模型/权限），模型管理（注册/API Key/Quota/路由/Fallback）",
+          "subtasks": [
+            "实现 Agent 列表页 + Agent 创建/编辑表单",
+            "实现 Agent 详情页 — Prompt 编辑器（System Prompt + 模板变量 + 版本管理）",
+            "实现 Agent Tool/Skill 绑定界面",
+            "实现 Agent 调试页 — 输入测试消息，查看完整执行 trace",
+            "实现模型列表页",
+            "实现模型配置页 — API Key / Base URL / Timeout / Max Token / Temperature",
+            "实现模型路由配置页 — 条件 → 模型映射规则",
+            "实现 Quota 管理页 — Token限制/请求限制/Budget",
+            "实现模型监控页 — TPS/QPS/Latency/Error Rate"
+          ],
+          "files": ["frontend/apps/admin-console/", "frontend/apps/agent-studio/", "frontend/apps/model-center/"],
+          "dependsOn": ["task-1.15", "task-1.9", "task-1.6"],
+          "status": "completed"
+        },
+
+        "task-1.20": {
+          "title": "frontend Knowledge Base 管理 + Chunk 查看 + Recall 调试页面",
+          "description": "知识库管理后台：文档上传、Chunk 查看、Hybrid Search 召回调试",
+          "subtasks": [
+            "实现知识库列表页 + 创建/编辑",
+            "实现文档管理页 — 上传/删除/重建索引/权限配置",
+            "实现 Chunk 查看页 — 查看内容/Parent Chunk/Embedding/Metadata",
+            "实现 Recall 调试页 — 输入 Query 查看 BM25/Vector/Rerank 三层结果",
+            "实现 RAG 链路分析 — 为什么召回这个 Chunk"
+          ],
+          "files": ["frontend/apps/rag-studio/"],
+          "dependsOn": ["task-1.15", "task-1.7"],
+          "status": "completed"
+        },
+
+        "task-1.21": {
+          "title": "frontend Tool Registry + 用户权限管理页面",
+          "description": "工具注册中心管理 + 用户/角色/权限/ABAC 规则管理",
+          "subtasks": [
+            "实现 Tool 列表页 + 详情页（OpenAPI Schema / 超时 / 限流 / 重试）",
+            "实现 Tool 测试台 — 手动输入参数 → 调试调用 → 查看返回",
+            "实现 Tool 调用日志页 — 入参/出参/latency/error",
+            "实现用户管理页 — 创建/导入/LDAP同步",
+            "实现角色管理页 — RBAC 角色 + 自定义角色",
+            "实现 ABAC 规则页 — 按部门/项目/标签动态权限",
+            "实现 AI 权限控制 — 模型权限/Tool 权限/KB 权限/Skill 权限"
+          ],
+          "files": ["frontend/apps/admin-console/"],
+          "dependsOn": ["task-1.15", "task-1.8", "task-1.5"],
+          "status": "completed"
+        },
+
+        "task-1.22": {
+          "title": "frontend Trace & Audit 页面（核心页面）",
+          "description": "AI 显微镜 + 事故黑匣子 + 调优工具：会话列表/对话流/Span 详情/Prompt 查看/Tool 链路/RAG 链路",
+          "subtasks": [
+            "实现会话列表 — session_id/user/agent/model/cost/latency/status/time + 多条件筛选",
+            "实现对话流展示 — 用户消息/Agent 回复/Tool 调用/RAG 检索/Memory 访问 分层展示",
+            "实现右侧 Trace 详情面板 — Intent/Skill/RAG/Tool/LLM 分层 Span 展开",
+            "实现 Prompt 查看弹窗 — System Prompt / Memory / Tool Context / Final Prompt",
+            "实现 Tool 链路查看 — 入参/出参/latency/retry",
+            "实现 RAG 链路查看 — chunk/rerank score/metadata",
+            "实现 Token 成本分析 — 按用户/Agent/模型/Tool 聚合统计",
+            "实现 Replay 回放功能 — 重新执行整个 Agent 流程",
+            "实现 Diff Prompt — 对比本次/上次 Prompt 差异",
+            "实现异常标记 — hallucination/tool failure/rag miss/prompt injection suspicion"
+          ],
+          "files": ["frontend/apps/trace-console/"],
+          "dependsOn": ["task-1.15", "task-1.14"],
+          "status": "completed"
+        }
+      }
+    },
+
+    "phase2_advanced": {
+      "name": "Phase 2 — 进阶（Skills + 长期Memory + Multi-Agent + Prompt平台 + 全链路Trace）",
+      "goal": "Skills 技能市场、长期记忆体系、多 Agent 协作、Prompt 工程平台、全链路可观测性",
+      "status": "not_started",
+      "tasks": {
+
+        "task-2.1": {
+          "title": "skill-service：Skills 管理系统",
+          "description": "Skill = Prompt + Tool + Workflow 能力封装，支持动态加载/热更新/版本管理/技能市场",
+          "subtasks": [
+            "设计 + 迁移表：skills, skill_versions, skill_tool_chains, skill_marketplace",
+            "实现 Skill CRUD API（/api/skills）— 含 Prompt/Tool Chain/Workflow/InputOutput Schema",
+            "实现 Skill 版本管理（Draft → Test → Published → Rollback）",
+            "实现 Skill 动态加载 + 热更新机制（发布后 Agent 无需重启即生效）",
+            "实现 Skill Router — Intent 识别 → Skill 匹配 → Skill Chain 编排",
+            "实现 Skill 市场 — 企业内部共享实验室/财务/客服等 Skill",
+            "实现 Skill 权限控制 — 按租户/部门/角色限制 Skill 使用"
+          ],
+          "files": ["backend-java/skill-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "not_started"
+        },
+
+        "task-2.2": {
+          "title": "agent-python Skill Engine 集成",
+          "description": "Agent Runtime 中的 Skill 路由和执行引擎",
+          "subtasks": [
+            "实现 Skill Router（app/core/router/skill_router.py）— 意图 → Skill 匹配 + 多 Skill 链式调用",
+            "实现 Skill Executor — 加载 Skill 定义 → 执行 Prompt + Tool Chain + Workflow",
+            "实现 Skill 热更新监听 — 监听 Kafka skill.published 事件，动态刷新本地 Skill 缓存",
+            "实现 Skills 目录（app/skills/）— data_analysis / customer_service / research 示例 Skill"
+          ],
+          "files": ["agent-python/app/core/router/", "agent-python/app/skills/"],
+          "dependsOn": ["task-2.1", "task-1.10"],
+          "status": "not_started"
+        },
+
+        "task-2.3": {
+          "title": "memory-service：长期记忆服务",
+          "description": "独立记忆微服务，管理 episodic/semantic/procedural 三类记忆",
+          "subtasks": [
+            "设计 + 迁移表：memory_entries, memory_embeddings, user_preferences, user_behaviors",
+            "实现记忆写入 API — episodic（事件记忆）/ semantic（语义记忆）/ procedural（过程记忆）",
+            "实现相似记忆检索 API — 基于向量相似度查询相关记忆",
+            "实现用户偏好学习 — 基于历史行为自动更新偏好权重",
+            "实现记忆衰减策略 — 按时间和重要性衰减",
+            "实现记忆权限隔离 — tenant_id + user_id 双重过滤"
+          ],
+          "files": ["backend-java/memory-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "not_started"
+        },
+
+        "task-2.4": {
+          "title": "agent-python 长期记忆增强",
+          "description": "将长期记忆能力从 Agent Runtime 接入独立 memory-service",
+          "subtasks": [
+            "实现 LongTermMemory Client（app/memory/long_term.py）— 调 memory-service API",
+            "实现 EpisodicMemory — 存储用户对话事件，按时间线检索",
+            "实现 SemanticMemory — 基于向量存储的语义记忆，相似检索",
+            "实现 ProceduralMemory — 存储用户偏好操作流程，复用成功经验",
+            "实现 Memory 自动摘要 — 定期将短期记忆压缩为长期记忆"
+          ],
+          "files": ["agent-python/app/memory/"],
+          "dependsOn": ["task-2.3", "task-1.12"],
+          "status": "not_started"
+        },
+
+        "task-2.5": {
+          "title": "Multi-Agent 协作框架",
+          "description": "Coordinator Agent + 多个专业 Agent 协作执行复杂任务",
+          "subtasks": [
+            "实现 CoordinatorAgent — 分析任务 → 分解子任务 → 分发给 SearchAgent/AnalysisAgent/ReportAgent",
+            "实现 SearchAgent — 执行 RAG 检索 + Tool 查询",
+            "实现 AnalysisAgent — 数据分析 + 推理",
+            "实现 ReportAgent — 汇总结果 + 生成报告",
+            "实现 Multi-Agent 通信协议 — Agent 间消息传递和结果汇总",
+            "实现 Multi-Agent Trace — 父 span 关联所有子 Agent span"
+          ],
+          "files": ["agent-python/app/agents/multi_agent/", "agent-python/app/core/agent_engine/"],
+          "dependsOn": ["task-1.10", "task-1.11", "task-1.12"],
+          "status": "not_started"
+        },
+
+        "task-2.6": {
+          "title": "prompt-service：Prompt 管理平台",
+          "description": "Prompt 版本管理/灰度发布/AB Test/模板变量/多模型测试",
+          "subtasks": [
+            "设计 + 迁移表：prompts, prompt_versions, prompt_templates, prompt_ab_tests",
+            "实现 Prompt CRUD API — 分类/标签/搜索",
+            "实现 Prompt 版本管理 — 保存历史版本，支持回滚",
+            "实现 Prompt 模板 — 变量定义 + Memory injection + RAG injection",
+            "实现 Prompt 灰度发布 — 按百分比/用户群逐步发布新 Prompt",
+            "实现 Prompt AB Test — 多模型/多 Prompt 对比测试，统计满意度/成本/Tool 调用率",
+            "实现 Token 预估 — 输入 Prompt 自动计算预计 Token 消耗"
+          ],
+          "files": ["backend-java/prompt-service/"],
+          "dependsOn": ["task-1.3", "task-1.4"],
+          "status": "not_started"
+        },
+
+        "task-2.7": {
+          "title": "frontend Skills 管理 + Prompt Center + 多 Agent 调试页面",
+          "description": "技能市场页面、Prompt 工程平台页面、多 Agent 调试页面",
+          "subtasks": [
+            "实现 Skill 列表页 + Skill 详情/编辑器（Prompt + Tool Chain + Workflow + Schema）",
+            "实现 Skill 市场页 — 企业内部 Skill 浏览/安装/评价",
+            "实现 Skill 运行测试页 — 输入测试 → Step 执行查看 → Tool 调用链",
+            "实现 Prompt Center 列表页 + 分类/搜索/标签",
+            "实现 Prompt 编辑器 — System Prompt + 变量注入 + Memory/RAG 占位符",
+            "实现 Prompt 测试页 — 多模型同时测试 + 多轮对话测试 + Token 预估",
+            "实现 Prompt AB Test 页 — 实验配置 + 结果对比（成本/效果/满意度）",
+            "实现 Multi-Agent 调试页 — 可视化 Coordinator → Search → Analysis → Report 执行流程"
+          ],
+          "files": ["frontend/apps/admin-console/", "frontend/apps/agent-studio/"],
+          "dependsOn": ["task-2.1", "task-2.6", "task-2.5", "task-1.15"],
+          "status": "not_started"
+        },
+
+        "task-2.8": {
+          "title": "trace-service 增强：Langfuse + OpenTelemetry 集成",
+          "description": "接入 Langfuse 做 LLM 可观测性，OpenTelemetry 做分布式链路追踪",
+          "subtasks": [
+            "集成 Langfuse SDK — 自动记录 LLM call prompt/token/cost/latency",
+            "集成 OpenTelemetry Java Agent — 自动采集微服务间调用链",
+            "实现 OTEL Collector 配置 — 接收 → 处理 → 导出到 Langfuse + Jaeger",
+            "实现 Grafana Dashboard — 全局 QPS/Token/成本/错误率/延迟面板",
+            "实现告警规则 — token > threshold / error rate > threshold / tool failure > threshold",
+            "实现告警通知 — Slack / Email / Webhook"
+          ],
+          "files": ["backend-java/trace-service/", "infra/observability/"],
+          "dependsOn": ["task-1.14"],
+          "status": "not_started"
+        },
+
+        "task-2.9": {
+          "title": "billing-service：计费与成本服务",
+          "description": "Token/成本计费，按租户/用户/Agent/模型维度的成本统计和账单",
+          "subtasks": [
+            "设计 + 迁移表：billing_records, cost_summaries, invoices",
+            "实现计费记录消费 — 从 Kafka 消费 llm.call 事件，计算 cost = token × 单价",
+            "实现成本聚合 API — 按租户/用户/Agent/模型/时间维度的 cost 汇总",
+            "实现预算告警 — 租户/用户 cost 接近 budget 阈值时触发",
+            "实现账单生成 — 月度账单（PDF/CSV 导出）"
+          ],
+          "files": ["backend-java/billing-service/"],
+          "dependsOn": ["task-1.3", "task-1.6"],
+          "status": "not_started"
+        }
+      }
+    },
+
+    "phase3_enterprise": {
+      "name": "Phase 3 — 企业级（AI Workflow + Agent 市场 + 智能路由 + AI 运营 + 安全治理）",
+      "goal": "AI 工作流自动化、Agent 市场、智能模型路由、AI 运营分析、企业安全治理",
+      "status": "not_started",
+      "tasks": {
+
+        "task-3.1": {
+          "title": "AI Workflow 引擎 — Temporal 集成",
+          "description": "基于 Temporal 实现企业级 AI 工作流编排，支持长周期任务/补偿/重试/审计",
+          "subtasks": [
+            "部署 Temporal Server（infra/temporal/）",
+            "实现 Temporal Worker — 将 Agent 执行封装为 Temporal Activity",
+            "实现 Workflow 定义 — 多步骤 Agent 流水线（如：数据采集 → RAG 分析 → 报告生成 → 审批）",
+            "实现 Saga 补偿 — 工作流失败时自动执行补偿操作",
+            "实现 Workflow 监控 — Temporal UI 查看工作流执行状态/历史/重试",
+            "实现 Workflow API — 创建/查询/取消/重试工作流"
+          ],
+          "files": ["agent-python/app/core/workflow/", "infra/temporal/"],
+          "dependsOn": ["task-1.10", "task-2.5"],
+          "status": "not_started"
+        },
+
+        "task-3.2": {
+          "title": "Agent 市场",
+          "description": "企业内部 Agent 市场，支持 Agent 发布/发现/安装/评价",
+          "subtasks": [
+            "设计 + 迁移表：agent_marketplace, agent_reviews, agent_installs",
+            "实现 Agent 发布到市场 — 包含 Prompt/Tool/Skill/Memory 完整配置",
+            "实现 Agent 发现 — 按分类/标签/热度搜索 Agent",
+            "实现 Agent 安装 — 一键复制 Agent 配置到当前租户",
+            "实现 Agent 评价 — 评分/评论/使用次数统计"
+          ],
+          "files": ["backend-java/agent-service/", "frontend/apps/agent-studio/"],
+          "dependsOn": ["task-1.9", "task-2.1"],
+          "status": "not_started"
+        },
+
+        "task-3.3": {
+          "title": "智能路由系统（AI Router）",
+          "description": "基于 prompt 长度/task 类型/token 预算的智能模型路由，自动降级提升稳定性和成本效率",
+          "subtasks": [
+            "实现 Task 分类器 — 自动识别代码/翻译/分析/客服等任务类型",
+            "实现成本优化路由 — 低复杂度 → 便宜模型，高复杂度 → 强模型",
+            "实现自动降级 — GPT-4 失败 → Claude → Qwen → DeepSeek 多级 fallback",
+            "实现成本预测 — 输入 Prompt → 预估不同模型的 Token 和 Cost",
+            "实现路由效果统计 — 各路由策略的 latency/cost/成功率对比"
+          ],
+          "files": ["agent-python/app/llm/model_router.py", "backend-java/model-service/"],
+          "dependsOn": ["task-1.6", "task-1.10"],
+          "status": "not_started"
+        },
+
+        "task-3.4": {
+          "title": "AI 运营分析中心",
+          "description": "AI 使用分析/用户行为分析/AI 质量分析/成本分析",
+          "subtasks": [
+            "实现 AI 使用分析 — 活跃用户/会话数/Token/成本统计 + 趋势图",
+            "实现用户行为分析 — 热门问题/热门 Skill/热门 Tool/模型偏好",
+            "实现 AI 质量分析 — 满意度评分/Tool 成功率/RAG 命中率/Hallucination 率",
+            "实现成本分析 — 按模型/部门/用户维度拆解成本，识别浪费",
+            "实现运营报表 — 周报/月报自动生成（PDF/飞书消息推送）",
+            "实现运营大屏 — 实时展示全局 AI 使用数据（适合 TV/大屏展示）"
+          ],
+          "files": ["backend-java/admin-service/", "frontend/apps/admin-console/"],
+          "dependsOn": ["task-2.8", "task-2.9"],
+          "status": "not_started"
+        },
+
+        "task-3.5": {
+          "title": "AI 安全治理系统",
+          "description": "Prompt Injection 检测/数据脱敏/越权检测/风险告警/审计日志",
+          "subtasks": [
+            "实现 Prompt Injection 检测 — 正则 + LLM 双重检测，标记可疑输入",
+            "实现数据脱敏 — 手机号/身份证/邮箱/银行卡自动脱敏",
+            "实现越权检测 — 检测 Tool 调用/RAG 检索是否超出用户权限范围",
+            "实现风险告警 — 异常行为触发 Slack/Email 通知",
+            "实现安全审计日志 — 记录所有敏感操作（登录/Prompt/Tool调用/数据访问）",
+            "实现 IP 限制/黑名单/速率限制安全策略",
+            "实现安全中心前台页面 — Prompt Injection 告警列表/脱敏日志/越权检测/审计日志"
+          ],
+          "files": ["backend-java/audit-service/", "agent-python/app/core/security/", "frontend/apps/admin-console/"],
+          "dependsOn": ["task-1.14", "task-1.4"],
+          "status": "not_started"
+        },
+
+        "task-3.6": {
+          "title": "admin-service：管理后台 API 聚合 + 平台运营功能",
+          "description": "Super Admin 平台运营功能：全局租户管理/平台监控/全局模型治理",
+          "subtasks": [
+            "实现管理后台 API 聚合层 — 聚合 Dashboard 所需的跨服务数据",
+            "实现平台运营 API — 全局 QPS/Token/成本监控",
+            "实现全局限流 — 按 Provider 全局速率限制",
+            "实现 Provider 熔断 — 某个 LLM Provider 异常时自动熔断",
+            "实现平台公告/消息推送"
+          ],
+          "files": ["backend-java/admin-service/"],
+          "dependsOn": ["task-1.3", "task-1.6"],
+          "status": "not_started"
+        },
+
+        "task-3.7": {
+          "title": "platform-sdk：Java + Python SDK 发布",
+          "description": "对外发布的 SDK，方便企业内部系统集成平台能力",
+          "subtasks": [
+            "实现 java-sdk — ChatClient / ToolClient / AgentClient / TraceClient",
+            "实现 python-sdk — chat / tool / agent / trace 模块",
+            "编写 SDK 使用文档 + 示例代码",
+            "发布到内部 Maven/PyPI 仓库"
+          ],
+          "files": ["sdk/"],
+          "dependsOn": ["task-1.10", "task-1.8", "task-1.14"],
+          "status": "not_started"
+        },
+
+        "task-3.8": {
+          "title": "Kubernetes 生产部署 + CI/CD",
+          "description": "K8s Helm Chart + GitHub Actions CI/CD Pipeline",
+          "subtasks": [
+            "编写 Helm Chart — 每个微服务的 Deployment/Service/ConfigMap/Ingress",
+            "配置 K8s Ingress — 路由规则 + TLS + WAF",
+            "实现 GitHub Actions CI — 代码检查 → 单元测试 → 镜像构建 → 推送",
+            "实现 CD Pipeline — 自动部署到 Dev/Staging，手动审批后部署到 Prod",
+            "实现蓝绿部署 / 金丝雀发布策略",
+            "编写 deploy/README.md — 部署文档"
+          ],
+          "files": ["deploy/"],
+          "dependsOn": ["task-1.1"],
+          "status": "not_started"
+        }
+      }
+    }
+  },
+
+  "cross_cutting": {
+    "name": "贯穿所有 Phase 的能力要求",
+    "items": [
+      "每个微服务必须有健康检查 endpoint (/actuator/health 或 /health)",
+      "每个微服务必须集成 OpenTelemetry（自动采集 latency/error/throughput）",
+      "所有 AI 相关 Span 必须包含：trace_id, span_id, parent_id, type (llm|tool|rag|memory), latency, cost, tenant_id",
+      "所有 API 必须经过 API Gateway（除 /health 和 /metrics）",
+      "所有 SQL 查询必须自动注入 tenant_id 过滤（数据隔离）",
+      "所有 Kafka 消息必须包含 trace_id 和 tenant_id",
+      "前端所有页面必须适配移动端响应式",
+      "每个 Phase 完成后必须编写集成测试验证端到端流程"
+    ]
+  },
+
+  "task_summary": {
+    "phase1_mvp": {
+      "task_count": 22,
+      "description": "涵盖 Monorepo 初始化、10 个 Java 微服务（common-lib, auth, user, model, rag, tool, agent, gateway, trace, 以及 agent-python 核心）、Python Agent Runtime、前端 5 个子应用基础、Chat UI/Trace Console 等核心页面",
+      "deliverable": "多租户 AI 聊天平台 MVP — 对话 + RAG + Tool 调用 + 多模型切换 + 权限 + Dashboard + Trace"
+    },
+    "phase2_advanced": {
+      "task_count": 9,
+      "description": "Skills 系统、长期 Memory、Multi-Agent、Prompt 平台、Langfuse/OpenTelemetry 集成、Billing 计费",
+      "deliverable": "Skills 技能市场 + 长期记忆 + 多 Agent 协作 + Prompt AB Test + LLM 可观测性 + 成本计费"
+    },
+    "phase3_enterprise": {
+      "task_count": 8,
+      "description": "Temporal AI Workflow、Agent 市场、智能路由、AI 运营分析、安全治理、SDK 发布、K8s CI/CD",
+      "deliverable": "企业级 AI OS 完整形态 — Workflow 自动化 + Agent 市场 + 智能路由 + 安全治理 + 生产部署"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@enterprise-ai/auth": ["../../packages/auth/src"],
+      "@enterprise-ai/api-client": ["../../packages/api-client/src"],
+      "@enterprise-ai/ui": ["../../packages/ui-components/src"],
+      "@enterprise-ai/utils": ["../../packages/utils/src"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
