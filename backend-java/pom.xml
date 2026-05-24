@@ -27,6 +27,7 @@
         <module>prompt-service</module>
         <module>billing-service</module>
         <module>admin-service</module>
+        <module>audit-service</module>
     </modules>
 
     <properties>
