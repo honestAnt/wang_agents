@@ -20,6 +20,8 @@
         <module>rag-service</module>
         <module>tool-service</module>
         <module>agent-service</module>
+        <module>gateway-service</module>
+        <module>trace-service</module>
     </modules>
 
     <properties>
