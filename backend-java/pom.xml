@@ -17,6 +17,7 @@
         <module>auth-service</module>
         <module>user-service</module>
         <module>model-service</module>
+        <module>rag-service</module>
     </modules>
 
     <properties>
