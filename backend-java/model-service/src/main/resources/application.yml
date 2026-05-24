@@ -1,0 +1,30 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: model-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/enterprise-ai-platform}
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/wang_agent}
+    username: ${POSTGRES_USER:wang_agent}
+    password: ${POSTGRES_PASSWORD:wang_agent}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history_model
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
