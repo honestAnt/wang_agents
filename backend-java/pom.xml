@@ -19,6 +19,7 @@
         <module>model-service</module>
         <module>rag-service</module>
         <module>tool-service</module>
+        <module>agent-service</module>
     </modules>
 
     <properties>
