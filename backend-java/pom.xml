@@ -22,6 +22,7 @@
         <module>agent-service</module>
         <module>gateway-service</module>
         <module>trace-service</module>
+        <module>skill-service</module>
     </modules>
 
     <properties>
