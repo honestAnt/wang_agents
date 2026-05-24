@@ -1,0 +1,16 @@
+apiVersion: v2
+name: enterprise-ai-platform
+description: Enterprise AI Platform — Helm chart for production Kubernetes deployment
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - ai
+  - agent
+  - llm
+  - rag
+  - enterprise
+
+maintainers:
+  - name: Enterprise AI Team

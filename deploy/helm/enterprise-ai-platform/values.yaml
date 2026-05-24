@@ -1,0 +1,178 @@
+# Default values for enterprise-ai-platform
+
+global:
+  environment: production
+  imageRegistry: docker.io/enterpriseai
+  imagePullPolicy: IfNotPresent
+  tenantId: ""
+
+# ── Gateway ─────────────────────────────────────────────────
+gateway:
+  enabled: true
+  replicaCount: 2
+  image: gateway-service
+  tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  ingress:
+    enabled: true
+    host: api.enterprise-ai.local
+    tls: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+# ── Backend Services ────────────────────────────────────────
+auth-service:
+  enabled: true
+  replicaCount: 2
+  image: auth-service
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+user-service:
+  enabled: true
+  replicaCount: 2
+  image: user-service
+
+agent-service:
+  enabled: true
+  replicaCount: 3
+  image: agent-service
+
+model-service:
+  enabled: true
+  replicaCount: 2
+  image: model-service
+
+rag-service:
+  enabled: true
+  replicaCount: 2
+  image: rag-service
+
+tool-service:
+  enabled: true
+  replicaCount: 2
+  image: tool-service
+
+skill-service:
+  enabled: true
+  replicaCount: 2
+  image: skill-service
+
+memory-service:
+  enabled: true
+  replicaCount: 2
+  image: memory-service
+
+prompt-service:
+  enabled: true
+  replicaCount: 2
+  image: prompt-service
+
+trace-service:
+  enabled: true
+  replicaCount: 2
+  image: trace-service
+
+billing-service:
+  enabled: true
+  replicaCount: 2
+  image: billing-service
+
+admin-service:
+  enabled: true
+  replicaCount: 2
+  image: admin-service
+
+audit-service:
+  enabled: true
+  replicaCount: 2
+  image: audit-service
+
+# ── Agent Runtime (Python) ──────────────────────────────────
+agent-runtime:
+  enabled: true
+  replicaCount: 4
+  image: agent-runtime
+  service:
+    port: 8000
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+
+# ── Temporal ────────────────────────────────────────────────
+temporal:
+  enabled: true
+  server:
+    replicaCount: 1
+    image: temporalio/auto-setup:1.24.2
+    persistence:
+      driver: postgresql
+  ui:
+    enabled: true
+    image: temporalio/ui:2.28.0
+
+# ── Databases & Infrastructure ──────────────────────────────
+postgresql:
+  enabled: true
+  image: postgres:15-alpine
+  persistence:
+    size: 50Gi
+  auth:
+    database: enterprise_ai
+    username: enterprise_ai
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  persistence:
+    size: 10Gi
+
+qdrant:
+  enabled: true
+  image: qdrant/qdrant:latest
+  persistence:
+    size: 100Gi
+
+opensearch:
+  enabled: true
+  image: opensearchproject/opensearch:2
+  persistence:
+    size: 200Gi
+  resources:
+    requests: { cpu: 1000m, memory: 2Gi }
+    limits: { cpu: 4000m, memory: 8Gi }
+
+kafka:
+  enabled: true
+  replicaCount: 3
+  persistence:
+    size: 100Gi
+
+# ── Observability ───────────────────────────────────────────
+observability:
+  langfuse:
+    enabled: true
+  otelCollector:
+    enabled: true
+  grafana:
+    enabled: true
+    adminPassword: ""

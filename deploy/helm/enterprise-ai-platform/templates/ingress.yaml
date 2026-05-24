@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enterprise-ai-gateway
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.gateway.ingress.annotations.cert-manager.io/cluster-issuer | quote }}
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  ingressClassName: nginx
+  {{- if .Values.gateway.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.gateway.ingress.host }}
+      secretName: enterprise-ai-tls
+  {{- end }}
+  rules:
+    - host: {{ .Values.gateway.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway-service
+                port:
+                  number: 8080
