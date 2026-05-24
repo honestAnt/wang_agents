@@ -1,9 +1,24 @@
 # Phase 1 MVP — Test Cases & Validation Plan
 
-**Last run: 2026-05-24** | **Total: 89 tests, 0 failures**
-- Java: 61 tests (common-lib 32, auth 3, user 9, model 6, rag 4, tool 3, agent 4)
-- Python: 28 tests (intent_router 8, tracer 6, model_router 6, memory 4, litellm 4)
-- TypeScript: compilation check passed (6 apps + 4 packages)
+**Last run: 2026-05-24** | **Total: 143 tests, 0 failures**
+- Java: 84 tests across 12 modules (service + controller layers)
+  - common-lib: 32 (ApiResponse, BusinessException, JwtUtil, SecurityContextHolder, TraceContext, TraceSpan)
+  - auth-service: 3 (TenantIsolationFilter)
+  - user-service: 9 (TenantService, DepartmentService)
+  - model-service: 6 (ModelService)
+  - rag-service: 4 (KnowledgeBaseService)
+  - tool-service: 3 (ToolService)
+  - agent-service: 4 (AgentService)
+  - skill-service: 4 (SkillService)
+  - memory-service: 7 (MemoryService 4 + MemoryController 3)
+  - prompt-service: 4 (PromptService 2 + PromptController 2)
+  - billing-service: 4 (BillingService 2 + BillingController 2)
+  - trace-service: 4 (TraceController)
+- Python: 59 tests across 10 modules
+  - intent_router: 8 | tracer: 6 | model_router: 6 | litellm_client: 4
+  - memory: 4 | main(FastAPI): 2 | skill: 5 | multi_agent: 9
+  - rag(embedding/reranker/permission/retriever): 7 | long_memory: 6 | executor: 2
+- TypeScript: tsc --noEmit passed (6 apps + 4 packages)
 
 ## Test Strategy
 
