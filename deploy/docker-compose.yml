@@ -48,6 +48,62 @@ services:
       - enterprise-ai-net
 
   # ============================================================
+  # Temporal — durable workflow orchestration
+  # ============================================================
+  temporal-postgres:
+    image: postgres:15-alpine
+    container_name: enterprise-ai-temporal-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5433:5432"
+    volumes:
+      - temporal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-ai-net
+
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    container_name: enterprise-ai-temporal
+    restart: unless-stopped
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-cass.yaml
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    networks:
+      - enterprise-ai-net
+
+  temporal-ui:
+    image: temporalio/ui:2.28.0
+    container_name: enterprise-ai-temporal-ui
+    restart: unless-stopped
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "${TEMPORAL_UI_PORT:-8080}:8080"
+    depends_on:
+      - temporal
+    networks:
+      - enterprise-ai-net
+
+  # ============================================================
   # MinIO — S3-compatible object storage
   # ============================================================
   minio:
@@ -122,6 +178,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  temporal_pgdata:
     driver: local
   minio_data:
     driver: local

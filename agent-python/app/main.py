@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.chat import router as chat_router
+from app.api.workflow_api import router as workflow_router
 from app.trace.tracer import init_tracer
 
 
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router, prefix="/api/v1")
+app.include_router(workflow_router)
 
 
 @app.get("/health")

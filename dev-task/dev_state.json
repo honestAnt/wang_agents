@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "planning",
-  "lastUpdated": "2026-05-24T19:45:00+08:00",
-  "status": "phase 1 completed, ready for phase 2",
+  "lastUpdated": "2026-05-24T21:10:00+08:00",
+  "status": "phase 1 + 2 completed, phase 3: task-3.1 done (32/39 tasks done)",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -392,7 +392,7 @@
     "phase2_advanced": {
       "name": "Phase 2 — 进阶（Skills + 长期Memory + Multi-Agent + Prompt平台 + 全链路Trace）",
       "goal": "Skills 技能市场、长期记忆体系、多 Agent 协作、Prompt 工程平台、全链路可观测性",
-      "status": "not_started",
+      "status": "completed",
       "tasks": {
 
         "task-2.1": {
@@ -409,7 +409,7 @@
           ],
           "files": ["backend-java/skill-service/"],
           "dependsOn": ["task-1.3", "task-1.4"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.2": {
@@ -423,7 +423,7 @@
           ],
           "files": ["agent-python/app/core/router/", "agent-python/app/skills/"],
           "dependsOn": ["task-2.1", "task-1.10"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.3": {
@@ -439,7 +439,7 @@
           ],
           "files": ["backend-java/memory-service/"],
           "dependsOn": ["task-1.3", "task-1.4"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.4": {
@@ -454,7 +454,7 @@
           ],
           "files": ["agent-python/app/memory/"],
           "dependsOn": ["task-2.3", "task-1.12"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.5": {
@@ -470,7 +470,7 @@
           ],
           "files": ["agent-python/app/agents/multi_agent/", "agent-python/app/core/agent_engine/"],
           "dependsOn": ["task-1.10", "task-1.11", "task-1.12"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.6": {
@@ -487,7 +487,7 @@
           ],
           "files": ["backend-java/prompt-service/"],
           "dependsOn": ["task-1.3", "task-1.4"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.7": {
@@ -505,7 +505,7 @@
           ],
           "files": ["frontend/apps/admin-console/", "frontend/apps/agent-studio/"],
           "dependsOn": ["task-2.1", "task-2.6", "task-2.5", "task-1.15"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.8": {
@@ -521,7 +521,7 @@
           ],
           "files": ["backend-java/trace-service/", "infra/observability/"],
           "dependsOn": ["task-1.14"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-2.9": {
@@ -536,7 +536,7 @@
           ],
           "files": ["backend-java/billing-service/"],
           "dependsOn": ["task-1.3", "task-1.6"],
-          "status": "not_started"
+          "status": "completed"
         }
       }
     },
@@ -560,7 +560,7 @@
           ],
           "files": ["agent-python/app/core/workflow/", "infra/temporal/"],
           "dependsOn": ["task-1.10", "task-2.5"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-3.2": {
