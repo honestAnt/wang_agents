@@ -1,0 +1,136 @@
+services:
+  # ============================================================
+  # PostgreSQL 15 — primary relational database
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: enterprise-ai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wang_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-wang_agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wang_agent}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wang_agent} -d ${POSTGRES_DB:-wang_agent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-ai-net
+
+  # ============================================================
+  # Redis 7 — session cache, short-term memory, rate limiting
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise-ai-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-ai-net
+
+  # ============================================================
+  # MinIO — S3-compatible object storage
+  # ============================================================
+  minio:
+    image: minio/minio:latest
+    container_name: enterprise-ai-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin123}
+    ports:
+      - "${S3_PORT:-9000}:9000"
+      - "${S3_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - enterprise-ai-net
+
+  # ============================================================
+  # Qdrant — vector database for embeddings / semantic search
+  # ============================================================
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: enterprise-ai-qdrant
+    restart: unless-stopped
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enterprise-ai-net
+
+  # ============================================================
+  # OpenSearch — full-text search + trace logs
+  # ============================================================
+  opensearch:
+    image: opensearchproject/opensearch:2
+    container_name: enterprise-ai-opensearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_PASSWORD:-Admin123!}
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      plugins.security.disabled: "true"
+    ports:
+      - "${OPENSEARCH_PORT:-9200}:9200"
+      - "${OPENSEARCH_PERF_PORT:-9600}:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:9200 | grep -q '200'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - enterprise-ai-net
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  opensearch_data:
+    driver: local
+
+networks:
+  enterprise-ai-net:
+    driver: bridge
+    name: enterprise-ai-net
