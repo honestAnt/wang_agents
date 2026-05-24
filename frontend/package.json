@@ -1,0 +1,17 @@
+{
+  "name": "enterprise-ai-frontend",
+  "private": true,
+  "packageManager": "pnpm@9.1.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "check-types": "turbo check-types"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  }
+}
