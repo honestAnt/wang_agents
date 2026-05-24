@@ -1,0 +1,39 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/enterprise-ai-platform}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/enterprise-ai-platform/protocol/openid-connect/certs}
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/wang_agent}
+    username: ${POSTGRES_USER:wang_agent}
+    password: ${POSTGRES_PASSWORD:wang_agent}
+    driver-class-name: org.postgresql.Driver
+
+keycloak:
+  realm: ${KEYCLOAK_REALM:enterprise-ai-platform}
+  auth-server-url: ${KEYCLOAK_HOST:http://localhost:8080}
+  resource: ${KEYCLOAK_CLIENT_ID:enterprise-ai-client}
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.enterpriseai: DEBUG
+    org.springframework.security: INFO
