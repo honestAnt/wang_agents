@@ -2,7 +2,7 @@
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "planning",
   "lastUpdated": "2026-05-24T21:10:00+08:00",
-  "status": "phase 1 + 2 completed, phase 3: task-3.1 done (32/39 tasks done)",
+  "status": "phase 1 + 2 completed, phase 3: tasks 3.1-3.2 done (33/39 tasks done)",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -575,7 +575,7 @@
           ],
           "files": ["backend-java/agent-service/", "frontend/apps/agent-studio/"],
           "dependsOn": ["task-1.9", "task-2.1"],
-          "status": "not_started"
+          "status": "completed"
         },
 
         "task-3.3": {
