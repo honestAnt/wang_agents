@@ -57,10 +57,8 @@ dev-task
 *.zip
 *.tar.gz
 *.rar
-/target/
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 # Maven
 .mvn/
@@ -69,10 +67,8 @@ mvnw.cmd
 
 # Gradle
 .gradle/
-build/
+**/build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 # IntelliJ IDEA
 .idea/
