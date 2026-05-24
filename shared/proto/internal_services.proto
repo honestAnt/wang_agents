@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package enterprise_ai.v1;
+
+option java_package = "com.enterpriseai.proto.v1";
+option java_multiple_files = true;
+option python_package = "enterprise_ai.proto.v1";
+
+// ============================================================
+// Java Microservice → Java Microservice internal gRPC
+// Used for internal service-to-service calls where REST
+// overhead is undesirable (model routing, RAG retrieval).
+// ============================================================
+
+// --- Model service (internal) ---
+
+service ModelService {
+  // Get model routing decision for a given request.
+  rpc RouteModel (ModelRouteRequest) returns (ModelRouteResponse);
+
+  // Validate API key and quota for a model call.
+  rpc CheckQuota (QuotaCheckRequest) returns (QuotaCheckResponse);
+}
+
+message ModelRouteRequest {
+  string trace_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string agent_id = 4;
+  string task_type = 5;  // chat, code, analysis, translation, summarization
+  int32 estimated_prompt_tokens = 6;
+  string preferred_model = 7;
+}
+
+message ModelRouteResponse {
+  string model = 1;
+  string provider = 2;
+  string api_base_url = 3;
+  string api_key_encrypted = 4;
+  float temperature = 5;
+  int32 max_tokens = 6;
+  repeated string fallback_models = 7;
+  double estimated_cost_usd = 8;
+}
+
+message QuotaCheckRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string agent_id = 3;
+  string model = 4;
+  int32 estimated_tokens = 5;
+}
+
+message QuotaCheckResponse {
+  bool allowed = 1;
+  int32 remaining_tokens = 2;
+  int32 remaining_requests = 3;
+  string rejection_reason = 4;
+}
+
+// --- RAG service (internal) ---
+
+service RagService {
+  // Hybrid search across a knowledge base.
+  rpc Search (RagSearchRequest) returns (RagSearchResponse);
+}
+
+message RagSearchRequest {
+  string trace_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string kb_id = 4;
+  string query = 5;
+  int32 top_k = 6;
+  float bm25_weight = 7;
+  float vector_weight = 8;
+  bool enable_rerank = 9;
+  map<string, string> permission_filters = 10;  // department, role, project
+}
+
+message RagSearchResponse {
+  repeated ScoredChunk chunks = 1;
+  int32 total_hits = 2;
+  int32 latency_ms = 3;
+}
+
+message ScoredChunk {
+  string chunk_id = 1;
+  string document_id = 2;
+  string document_title = 3;
+  string content = 4;
+  float bm25_score = 5;
+  float vector_score = 6;
+  float rerank_score = 7;
+  map<string, string> metadata = 8;
+}
+
+// --- Tool service (internal) ---
+
+service ToolService {
+  // Execute a registered tool.
+  rpc ExecuteTool (ToolExecuteRequest) returns (ToolExecuteResponse);
+}
+
+message ToolExecuteRequest {
+  string trace_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string tool_name = 4;
+  string parameters_json = 5;
+  int32 timeout_ms = 6;
+}
+
+message ToolExecuteResponse {
+  int32 status_code = 1;
+  string body_json = 2;
+  map<string, string> headers = 3;
+  int32 latency_ms = 4;
+  bool circuit_open = 5;
+  string error_message = 6;
+}
+
+// --- Memory service (internal) ---
+
+service MemoryService {
+  // Retrieve relevant memories for context building.
+  rpc RetrieveMemories (MemoryRetrieveRequest) returns (MemoryRetrieveResponse);
+
+  // Store a new memory entry.
+  rpc StoreMemory (MemoryStoreRequest) returns (MemoryStoreResponse);
+}
+
+message MemoryRetrieveRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string agent_id = 3;
+  string session_id = 4;
+  string query = 5;
+  int32 limit = 6;
+  repeated string memory_types = 7;  // episodic, semantic, procedural
+}
+
+message MemoryRetrieveResponse {
+  repeated MemoryRecord memories = 1;
+}
+
+message MemoryRecord {
+  string memory_id = 1;
+  string type = 2;  // episodic, semantic, procedural
+  string content = 3;
+  float relevance_score = 4;
+  string created_at = 5;
+  map<string, string> metadata = 6;
+}
+
+message MemoryStoreRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string agent_id = 3;
+  string session_id = 4;
+  string type = 5;
+  string content = 6;
+  map<string, string> metadata = 7;
+}
+
+message MemoryStoreResponse {
+  string memory_id = 1;
+  bool created = 2;
+}

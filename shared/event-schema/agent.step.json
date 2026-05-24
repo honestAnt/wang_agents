@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-ai-platform/schemas/events/v1/agent.step.json",
+  "title": "Agent Step Event",
+  "description": "Emitted each time an Agent executes a step in the reason→act→observe loop.",
+  "type": "object",
+  "required": ["event_id", "trace_id", "span_id", "tenant_id", "agent_id", "session_id", "step_type", "timestamp"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "trace_id": { "type": "string", "format": "uuid" },
+    "span_id": { "type": "string", "format": "uuid" },
+    "parent_span_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string" },
+    "user_id": { "type": "string" },
+    "agent_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "step_index": { "type": "integer", "description": "0-based step index in the agent loop." },
+    "step_type": {
+      "type": "string",
+      "enum": ["reason", "act", "observe", "plan", "reflect"],
+      "description": "Phase of the agent loop."
+    },
+    "input": { "type": "object" },
+    "output": { "type": "object" },
+    "latency_ms": { "type": "number" },
+    "status": { "type": "string", "enum": ["ok", "error"] },
+    "error_message": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

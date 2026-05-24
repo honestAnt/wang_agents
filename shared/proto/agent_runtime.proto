@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+package enterprise_ai.v1;
+
+option java_package = "com.enterpriseai.proto.v1";
+option java_multiple_files = true;
+option python_package = "enterprise_ai.proto.v1";
+
+// ============================================================
+// Agent Runtime → Java Backend gRPC service definitions
+// Used for low-latency, typed communication between Python
+// Agent Runtime and Java microservices.
+// ============================================================
+
+// --- Agent execution ---
+
+service AgentRuntime {
+  // Execute an agent with streaming response chunks.
+  rpc Chat (ChatRequest) returns (stream ChatResponse);
+
+  // Retrieve context for an agent (RAG + Memory + System Prompt).
+  rpc BuildContext (ContextRequest) returns (ContextResponse);
+}
+
+message ChatRequest {
+  string trace_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string agent_id = 4;
+  string session_id = 5;
+  string message = 6;
+  string model = 7;
+  float temperature = 8;
+  int32 max_tokens = 9;
+  repeated string file_urls = 10;
+  map<string, string> metadata = 11;
+}
+
+message ChatResponse {
+  string trace_id = 1;
+  string session_id = 2;
+
+  oneof event {
+    Delta delta = 10;
+    ToolCall tool_call = 11;
+    RagRetrieval rag_retrieval = 12;
+    Completion done = 13;
+    Error error = 14;
+  }
+}
+
+message Delta {
+  string content = 1;
+}
+
+message ToolCall {
+  string tool_name = 1;
+  string tool_type = 2;  // http, mcp, sdk
+  string parameters_json = 3;
+  string response_json = 4;
+  int32 latency_ms = 5;
+  string status = 6;  // ok, error, timeout
+}
+
+message RagRetrieval {
+  string query = 1;
+  string kb_id = 2;
+  repeated Chunk chunks = 3;
+  int32 latency_ms = 4;
+}
+
+message Chunk {
+  string chunk_id = 1;
+  string document_id = 2;
+  string document_title = 3;
+  string content = 4;
+  float bm25_score = 5;
+  float vector_score = 6;
+  float rerank_score = 7;
+  map<string, string> metadata = 8;
+}
+
+message Completion {
+  string full_text = 1;
+  string finish_reason = 2;
+  int32 prompt_tokens = 3;
+  int32 completion_tokens = 4;
+  double cost_usd = 5;
+  int32 total_latency_ms = 6;
+}
+
+message Error {
+  string code = 1;
+  string message = 2;
+}
+
+// --- Context building ---
+
+message ContextRequest {
+  string trace_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string agent_id = 4;
+  string session_id = 5;
+  string user_message = 6;
+}
+
+message ContextResponse {
+  string system_prompt = 1;
+  repeated MemoryEntry recent_memories = 2;
+  repeated RagChunk rag_context = 3;
+  repeated ToolDefinition available_tools = 4;
+  repeated SkillDefinition available_skills = 5;
+}
+
+message MemoryEntry {
+  string role = 1;  // user, assistant, system
+  string content = 2;
+  string timestamp = 3;
+}
+
+message RagChunk {
+  string chunk_id = 1;
+  string content = 2;
+  string document_title = 3;
+  float score = 4;
+}
+
+message ToolDefinition {
+  string tool_id = 1;
+  string name = 2;
+  string description = 3;
+  string schema_json = 4;  // JSON Schema of parameters
+}
+
+message SkillDefinition {
+  string skill_id = 1;
+  string name = 2;
+  string description = 3;
+  string prompt_template = 4;
+  repeated string tool_ids = 5;
+}
+
+// --- Span ingestion (for trace-service) ---
+
+service TraceIngestion {
+  // Ingest spans in batches.
+  rpc IngestSpans (IngestSpansRequest) returns (IngestSpansResponse);
+}
+
+message IngestSpansRequest {
+  repeated Span spans = 1;
+}
+
+message IngestSpansResponse {
+  int32 accepted = 1;
+  int32 rejected = 2;
+  repeated string errors = 3;
+}
+
+// Mirror of trace_schema.json Span definition.
+message Span {
+  string trace_id = 1;
+  string span_id = 2;
+  string parent_id = 3;
+  string type = 4;  // llm, tool, rag, memory, agent, skill, api, workflow
+  string name = 5;
+  string tenant_id = 6;
+  string user_id = 7;
+  string agent_id = 8;
+  string session_id = 9;
+  string started_at = 10;
+  string ended_at = 11;
+  double latency_ms = 12;
+  string status = 13;  // ok, error, timeout, cancelled
+  string error_message = 14;
+  string input_json = 15;
+  string output_json = 16;
+
+  SpanMetadata metadata = 17;
+  repeated string tags = 18;
+}
+
+message SpanMetadata {
+  string model = 1;
+  string provider = 2;
+  double cost_usd = 3;
+  int32 prompt_tokens = 4;
+  int32 completion_tokens = 5;
+  int32 total_tokens = 6;
+  string tool_name = 7;
+  string tool_type = 8;
+  string kb_id = 9;
+  int32 chunks_count = 10;
+  double rerank_score = 11;
+  string memory_type = 12;
+  string skill_name = 13;
+}

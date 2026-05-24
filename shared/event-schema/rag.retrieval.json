@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-ai-platform/schemas/events/v1/rag.retrieval.json",
+  "title": "RAG Retrieval Event",
+  "description": "Emitted each time the RAG engine performs a retrieval operation.",
+  "type": "object",
+  "required": ["event_id", "trace_id", "span_id", "tenant_id", "query", "kb_id", "timestamp"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "trace_id": { "type": "string", "format": "uuid" },
+    "span_id": { "type": "string", "format": "uuid" },
+    "parent_span_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string" },
+    "user_id": { "type": "string" },
+    "agent_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "query": { "type": "string", "description": "Original user query or rewritten query." },
+    "rewritten_query": { "type": "string", "description": "LLM-rewritten query for better retrieval." },
+    "kb_id": { "type": "string", "description": "Knowledge base identifier." },
+    "retrieval_type": { "type": "string", "enum": ["bm25", "vector", "hybrid"] },
+    "filters": { "type": "object", "description": "Permission and metadata filters applied." },
+    "top_k": { "type": "integer", "default": 5 },
+    "chunks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "chunk_id": { "type": "string" },
+          "document_id": { "type": "string" },
+          "document_title": { "type": "string" },
+          "content_preview": { "type": "string", "maxLength": 500 },
+          "bm25_score": { "type": "number" },
+          "vector_score": { "type": "number" },
+          "rerank_score": { "type": "number" },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "latency_ms": { "type": "number" },
+    "status": { "type": "string", "enum": ["ok", "error"] },
+    "error_message": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

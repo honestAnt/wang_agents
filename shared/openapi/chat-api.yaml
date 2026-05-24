@@ -1,0 +1,225 @@
+openapi: "3.1.0"
+info:
+  title: Enterprise AI Platform — Chat API
+  version: "1.0.0"
+  description: |
+    Agent chat runtime API.
+    Core endpoint for conversational AI with streaming SSE support.
+    All requests require Bearer JWT (validated by API Gateway).
+
+servers:
+  - url: /api/v1
+    description: API Gateway proxy
+
+security:
+  - bearerAuth: []
+
+paths:
+  /chat:
+    post:
+      summary: Send a chat message (SSE streaming)
+      operationId: chat
+      tags: [Chat]
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string }
+          description: Tenant identifier for multi-tenant isolation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                  description: Existing session ID for continuing a conversation.
+                agent_id:
+                  type: string
+                  description: Agent to use. Falls back to user's default agent.
+                model:
+                  type: string
+                  description: Model override (e.g. gpt-4.1, claude-sonnet-4-6).
+                message:
+                  type: string
+                  description: User's chat message.
+                files:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      url: { type: string }
+                      type: { type: string }
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                max_tokens:
+                  type: integer
+      responses:
+        "200":
+          description: SSE stream of agent execution events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE events: `delta` (text chunk), `tool_call` (tool invocation),
+                  `rag_retrieval` (knowledge chunks), `done` (completion with session_id),
+                  `error` (error details).
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /chat/sessions:
+    get:
+      summary: List chat sessions for current user
+      operationId: listSessions
+      tags: [Chat]
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: agent_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Paginated session list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+
+  /chat/sessions/{session_id}:
+    get:
+      summary: Get session detail with full message history
+      operationId: getSession
+      tags: [Chat]
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Session detail with messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+    delete:
+      summary: Delete a session
+      operationId: deleteSession
+      tags: [Chat]
+      parameters:
+        - name: X-Tenant-Id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: session_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Session deleted.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SessionList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionSummary"
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+
+    SessionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        agent_id: { type: string }
+        agent_name: { type: string }
+        title: { type: string }
+        last_message_preview: { type: string }
+        message_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SessionDetail:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        agent_id: { type: string }
+        agent_name: { type: string }
+        title: { type: string }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              role: { type: string, enum: [user, assistant, system, tool] }
+              content: { type: string }
+              tool_calls:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tool_name: { type: string }
+                    parameters: { type: object }
+                    response: { type: object }
+              rag_chunks:
+                type: array
+                items: { type: object }
+              created_at: { type: string, format: date-time }
+        trace_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: Missing or invalid JWT.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    ApiError:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        trace_id: { type: string, format: uuid }

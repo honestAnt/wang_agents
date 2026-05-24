@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-ai-platform/schemas/events/v1/tool.call.json",
+  "title": "Tool Call Event",
+  "description": "Emitted each time an Agent invokes a Tool.",
+  "type": "object",
+  "required": ["event_id", "trace_id", "span_id", "tenant_id", "tool_name", "tool_type", "timestamp"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "trace_id": { "type": "string", "format": "uuid" },
+    "span_id": { "type": "string", "format": "uuid" },
+    "parent_span_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string" },
+    "user_id": { "type": "string" },
+    "agent_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "tool_name": { "type": "string", "description": "Registered tool name." },
+    "tool_type": { "type": "string", "enum": ["http", "mcp", "sdk"] },
+    "parameters": { "type": "object", "description": "Input parameters passed to the tool." },
+    "response": { "type": "object", "description": "Tool response body." },
+    "status_code": { "type": "integer" },
+    "latency_ms": { "type": "number" },
+    "retry_count": { "type": "integer", "default": 0 },
+    "status": { "type": "string", "enum": ["ok", "error", "timeout", "circuit_open"] },
+    "error_message": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

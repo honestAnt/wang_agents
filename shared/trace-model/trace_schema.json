@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-ai-platform/schemas/trace/v1/trace_schema.json",
+  "title": "Enterprise AI Platform — Unified Trace Span Model",
+  "description": "All services must emit spans conforming to this schema for LLM observability.",
+  "type": "object",
+  "required": ["trace_id", "span_id", "type", "tenant_id", "started_at"],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Root trace identifier, propagated across all downstream calls."
+    },
+    "span_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this span."
+    },
+    "parent_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Parent span identifier. Null for root spans."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["llm", "tool", "rag", "memory", "agent", "skill", "api", "workflow"],
+      "description": "Span type indicating which component produced it."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable span name, e.g. 'gpt-4.1 chat completion', 'rag.retrieve'.",
+
+      "examples": ["gpt-4.1 chat completion", "rag.retrieve", "tool.weather_api"]
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant identifier for multi-tenant isolation."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Authenticated user who triggered the request."
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Agent identifier if this span belongs to an agent execution."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Conversation session identifier."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the span started."
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the span ended."
+    },
+    "latency_ms": {
+      "type": "number",
+      "description": "Duration of the span in milliseconds."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "error", "timeout", "cancelled"],
+      "description": "Span outcome."
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error details if status is 'error'."
+    },
+    "input": {
+      "type": "object",
+      "description": "Span input payload. For LLM calls: messages, model, temperature. For RAG: query, filters. For Tool: name, parameters."
+    },
+    "output": {
+      "type": "object",
+      "description": "Span output payload. For LLM calls: completion text, finish_reason. For RAG: retrieved chunks. For Tool: response body."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Type-specific metadata.",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "LLM model name (required when type=llm)."
+        },
+        "provider": {
+          "type": "string",
+          "description": "LLM provider: openai, anthropic, google, deepseek, qwen, vllm, ollama."
+        },
+        "cost_usd": {
+          "type": "number",
+          "description": "Cost of this span in USD (required for LLM spans)."
+        },
+        "prompt_tokens": {
+          "type": "number",
+          "description": "Number of prompt tokens consumed."
+        },
+        "completion_tokens": {
+          "type": "number",
+          "description": "Number of completion tokens consumed."
+        },
+        "total_tokens": {
+          "type": "number",
+          "description": "Total tokens consumed."
+        },
+        "tool_name": {
+          "type": "string",
+          "description": "Tool name (required when type=tool)."
+        },
+        "tool_type": {
+          "type": "string",
+          "description": "Tool type: http, mcp, sdk."
+        },
+        "kb_id": {
+          "type": "string",
+          "description": "Knowledge base identifier (for type=rag)."
+        },
+        "chunks_count": {
+          "type": "number",
+          "description": "Number of chunks retrieved (for type=rag)."
+        },
+        "rerank_score": {
+          "type": "number",
+          "description": "Top rerank score (for type=rag)."
+        },
+        "memory_type": {
+          "type": "string",
+          "description": "Memory type: short_term, long_term, vector (for type=memory)."
+        },
+        "skill_name": {
+          "type": "string",
+          "description": "Skill name (for type=skill)."
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Arbitrary tags for filtering and grouping."
+    }
+  }
+}
