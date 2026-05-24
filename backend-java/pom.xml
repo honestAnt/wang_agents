@@ -25,6 +25,7 @@
         <module>skill-service</module>
         <module>memory-service</module>
         <module>prompt-service</module>
+        <module>billing-service</module>
     </modules>
 
     <properties>

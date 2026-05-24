@@ -1,0 +1,38 @@
+# Task 2.8 — Observability profile (Langfuse + OpenTelemetry)
+# Activate with: spring.profiles.active=observability
+
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: trace-service
+      auto-offset-reset: earliest
+
+# OpenTelemetry (auto-instrumented via Java Agent)
+otel:
+  service:
+    name: trace-service
+  exporter:
+    otlp:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4317}
+  traces:
+    sampler: always_on
+
+# Langfuse
+langfuse:
+  public-key: ${LANGFUSE_PUBLIC_KEY:}
+  secret-key: ${LANGFUSE_SECRET_KEY:}
+  host: ${LANGFUSE_HOST:http://localhost:3000}
+
+# Grafana alert rules (JSON)
+grafana:
+  alerts:
+    - name: high_token_usage
+      condition: token_usage > 1000000
+      channel: slack
+    - name: high_error_rate
+      condition: error_rate > 0.05
+      channel: email
+    - name: tool_failure_spike
+      condition: tool_failure_count > 10
+      channel: webhook
