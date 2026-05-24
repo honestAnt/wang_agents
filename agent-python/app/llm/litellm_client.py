@@ -33,7 +33,7 @@ class LiteLLMClient:
         """
         yield f"[LiteLLM: {model}] response placeholder"
 
-    async def get_cost_estimate(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    def get_cost_estimate(self, model: str, prompt_tokens: int, completion_tokens: int) -> float:
         """Estimate cost for a model based on token counts."""
         pricing = {
             "gpt-4.1": (0.03, 0.06),

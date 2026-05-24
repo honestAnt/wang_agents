@@ -101,14 +101,14 @@ bin/
 /.nb-gradle/
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
 .eggs/
 dist/
 *.egg
-.venv/
+**/.venv/
 venv/
 env/
 *.so
