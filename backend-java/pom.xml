@@ -26,6 +26,7 @@
         <module>memory-service</module>
         <module>prompt-service</module>
         <module>billing-service</module>
+        <module>admin-service</module>
     </modules>
 
     <properties>
