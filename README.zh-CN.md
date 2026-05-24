@@ -214,6 +214,21 @@ cd frontend && pnpm dev
 - `企业智能体页面设计.docx` — UI/UX 页面设计
 - `企业智能体工程目录实现.docx` — 代码仓库目录结构
 
+## 版本
+
+当前版本：**v0.1.0-alpha**（规划阶段）
+
+详见 [CHANGELOG](./CHANGELOG.md) 版本历史。
+
 ## 许可证
 
-待定
+版权所有 (c) 2026 [fengbao.wang](mailto:wangfengbaowfb@gmail.com)。保留所有权利。
+
+- **个人及学术使用**：免费 — 可用于个人项目和非商业性学术研究，自由使用、复制、修改。
+- **商业使用**：须事先取得作者的书面授权。商业授权请联系 [wangfengbaowfb@gmail.com](mailto:wangfengbaowfb@gmail.com)。
+
+完整条款见 [LICENSE](./LICENSE)。
+
+## 免责声明
+
+本软件按"原样"提供，不提供任何明示或暗示的保证。作者不对因使用本软件而产生的任何损害承担责任。使用风险自负。

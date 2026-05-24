@@ -214,6 +214,21 @@ See `dev-map/` for design documents:
 - `企业智能体页面设计.docx` — UI/UX page design
 - `企业智能体工程目录实现.docx` — Monorepo directory structure
 
+## Version
+
+Current version: **v0.1.0-alpha** (Planning Phase)
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## License
 
-TBD
+Copyright (c) 2026 [fengbao.wang](mailto:wangfengbaowfb@gmail.com). All rights reserved.
+
+- **Personal & Academic Use**: Free — use, copy, and modify for personal projects and non-commercial academic research.
+- **Commercial Use**: Requires prior written authorization from the author. Contact [wangfengbaowfb@gmail.com](mailto:wangfengbaowfb@gmail.com) for commercial licensing.
+
+See [LICENSE](./LICENSE) for full terms.
+
+## Disclaimer
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF THIS SOFTWARE. USE AT YOUR OWN RISK.
