@@ -1,23 +1,12 @@
-"""RAG retriever — local Qdrant vector search with Java rag-service fallback."""
+"""RAG retriever — local Qdrant vector search with embedding + optional rerank."""
 
 import logging
-import os
-
-import httpx
 
 logger = logging.getLogger(__name__)
 
 
 class Retriever:
-    """Hybrid retriever: local Qdrant ANN search with Java rag-service fallback.
-
-    Priority:
-        1. Local Qdrant vector search (fast, no network hop)
-        2. Java rag-service HTTP API (fallback when Qdrant is unavailable)
-    """
-
-    def __init__(self):
-        self._rag_service_url = os.getenv("RAG_SERVICE_URL", "http://localhost:8083")
+    """Local retriever using Qdrant vector search with embedding and optional reranking."""
 
     async def search(
         self,
@@ -28,21 +17,17 @@ class Retriever:
         enable_rerank: bool = True,
         permission_filters: dict | None = None,
     ) -> list[dict]:
-        """Execute hybrid search against the knowledge base.
-
-        Tries local Qdrant first; falls back to Java rag-service on failure.
-        """
+        """Execute vector search against the local knowledge base via Qdrant."""
         results = await self._search_local(
             tenant_id, kb_id, query, top_k, permission_filters
         )
-        if results:
-            if enable_rerank and len(results) > 1:
-                results = await self._apply_rerank(query, results, top_k)
-            return results[:top_k]
+        if not results:
+            logger.debug("RAG search returned no results for kb=%s", kb_id)
+            return []
 
-        return await self._search_remote(
-            tenant_id, kb_id, query, top_k, enable_rerank, permission_filters
-        )
+        if enable_rerank and len(results) > 1:
+            results = await self._apply_rerank(query, results, top_k)
+        return results[:top_k]
 
     async def _search_local(
         self,
@@ -76,35 +61,6 @@ class Retriever:
         except Exception as e:
             logger.debug("Local Qdrant search failed: %s", e)
             return []
-
-    async def _search_remote(
-        self,
-        tenant_id: str,
-        kb_id: str,
-        query: str,
-        top_k: int,
-        enable_rerank: bool,
-        permission_filters: dict | None,
-    ) -> list[dict]:
-        """Fallback: search via Java rag-service HTTP API."""
-        async with httpx.AsyncClient(timeout=30) as client:
-            try:
-                url = f"{self._rag_service_url}/api/rag/search"
-                payload = {
-                    "tenant_id": tenant_id,
-                    "kb_id": kb_id,
-                    "query": query,
-                    "top_k": top_k,
-                    "enable_rerank": enable_rerank,
-                    "permission_filters": permission_filters or {},
-                }
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-                return data.get("results", data if isinstance(data, list) else [])
-            except Exception as e:
-                logger.error("RAG search failed kb=%s: %s", kb_id, e)
-                return []
 
     async def _apply_rerank(
         self, query: str, chunks: list[dict], top_k: int

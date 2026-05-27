@@ -1,9 +1,10 @@
 """Long-term memory — delegates to Java memory-service via HTTP API."""
 
 import logging
-import os
 
 import httpx
+
+from app.config import MEMORY_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class LongTermMemory:
     """
 
     def __init__(self):
-        self._memory_service_url = os.getenv("MEMORY_SERVICE_URL", "http://localhost:8089")
+        self._memory_service_url = MEMORY_SERVICE_URL
 
     async def store(
         self,

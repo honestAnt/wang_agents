@@ -1,4 +1,4 @@
-"""Chat API — SSE streaming endpoint."""
+"""Chat API — SSE streaming endpoint and available models."""
 
 import asyncio
 
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.core.agent_engine.engine import AgentEngine
+from app.llm.model_wrapper import ModelWrapper
 from app.trace.tracer import TraceContext, tracer
 
 router = APIRouter()
@@ -24,7 +25,7 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 async def chat(
     request: ChatRequest,
-    x_tenant_id: str = Header(..., alias="X-Tenant-Id"),
+    x_tenant_id: str = Header("", alias="X-Tenant-Id"),
     x_trace_id: str = Header(None, alias="X-Trace-Id"),
 ):
     """Stream agent response via SSE."""
@@ -46,4 +47,19 @@ async def chat(
             ):
                 yield event
 
-    return EventSourceResponse(event_stream())
+    return EventSourceResponse(event_stream(), sep="\n")
+
+
+@router.get("/models")
+async def list_models():
+    """Return available models from the provider registry."""
+    models = []
+    for name, cfg in ModelWrapper.PROVIDER_REGISTRY.items():
+        input_price, output_price = ModelWrapper.COST_TABLE.get(name, ModelWrapper.DEFAULT_COST)
+        models.append({
+            "name": name,
+            "provider": cfg.provider,
+            "inputPrice": input_price,
+            "outputPrice": output_price,
+        })
+    return {"models": models}

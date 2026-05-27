@@ -5,6 +5,8 @@ import os
 
 import httpx
 
+from app.config import TOOL_SERVICE_URL
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,7 +14,7 @@ class ToolExecutor:
     """Executes tool calls — resolves tool definitions from Java tool-service and proxies execution."""
 
     def __init__(self):
-        self._tool_service_url = os.getenv("TOOL_SERVICE_URL", "http://localhost:8082")
+        self._tool_service_url = TOOL_SERVICE_URL
 
     async def execute(
         self,

@@ -65,7 +65,12 @@ class ModelWrapper:
             default_base_url="https://generativelanguage.googleapis.com/v1beta",
         ),
         # DeepSeek (OpenAI-compatible)
-        "deepseek-v3": ProviderConfig(
+        "deepseek-v4-flash": ProviderConfig(
+            provider="openai_compatible", api_key_env="DEEPSEEK_API_KEY",
+            base_url_env="DEEPSEEK_BASE_URL",
+            default_base_url="https://api.deepseek.com/v1",
+        ),
+        "deepseek-v4-pro": ProviderConfig(
             provider="openai_compatible", api_key_env="DEEPSEEK_API_KEY",
             base_url_env="DEEPSEEK_BASE_URL",
             default_base_url="https://api.deepseek.com/v1",
@@ -91,7 +96,8 @@ class ModelWrapper:
         "gpt-4.1-nano": (0.000075, 0.0003),
         "claude-sonnet-4-6": (0.003, 0.015),
         "claude-haiku-4-5-20251001": (0.0008, 0.004),
-        "deepseek-v3": (0.00027, 0.0011),
+        "deepseek-v4-flash": (0.00027, 0.0011),
+        "deepseek-v4-pro": (0.00081, 0.0033),
         "qwen-max": (0.002, 0.006),
         "qwen-turbo": (0.0003, 0.0006),
         "gemini-2.0-flash": (0.0001, 0.0004),
@@ -153,6 +159,11 @@ class ModelWrapper:
         client = await self._get_client()
         base_url = os.getenv(config.base_url_env or "", "") or config.default_base_url
         api_key = os.getenv(config.api_key_env, "")
+        if not api_key:
+            raise ValueError(
+                f"API key not configured for model '{model}'. "
+                f"Set the {config.api_key_env} environment variable."
+            )
 
         body = {
             "model": model,

@@ -1,9 +1,10 @@
 """Skill router — queries Java skill-service for intent-based skill matching and chaining."""
 
 import logging
-import os
 
 import httpx
+
+from app.config import SKILL_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class SkillRouter:
     """Routes user intent to registered skills via Java skill-service, supports multi-skill chaining."""
 
     def __init__(self):
-        self._skill_service_url = os.getenv("SKILL_SERVICE_URL", "http://localhost:8088")
+        self._skill_service_url = SKILL_SERVICE_URL
 
     async def match(self, intent: str, tenant_id: str) -> list[dict]:
         """Find skills matching the given intent for a tenant.

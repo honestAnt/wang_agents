@@ -8,6 +8,8 @@ import time
 
 import httpx
 
+from app.config import SKILL_SERVICE_URL
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +23,7 @@ class SkillLoader:
     CACHE_TTL = 300  # 5 minutes
 
     def __init__(self):
-        self._skill_service_url = os.getenv("SKILL_SERVICE_URL", "http://localhost:8088")
+        self._skill_service_url = SKILL_SERVICE_URL
         self._skill_cache: dict[str, tuple[dict, float]] = {}  # skill_id → (definition, loaded_at)
         self._kafka_consumer = None
         self._kafka_task: asyncio.Task | None = None

@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "refactoring",
-  "lastUpdated": "2026-05-27T22:00:00+08:00",
-  "status": "Reranker remote backend + caller.py: RerankerClient with POST /rerank, recall() with LLM fallback",
+  "lastUpdated": "2026-05-27T16:00:00+08:00",
+  "status": "Fixed Python service URLs to point to consolidated agent-application on port 9090",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -19,7 +19,108 @@
   ],
 
   "phases": {
+    "phase4_frontend_theme": {
+      "name": "Phase 4 — Frontend Light-Blue Theme (antd + Tailwind)",
+      "goal": "全部 6 个子应用统一淡蓝色主题，antd 原生组件替代自定义组件，Tailwind 管理布局",
+      "status": "in_progress",
+      "tasks": {
+        "task-4.1": {
+          "title": "共享基础设施：安装依赖 + Tailwind 配置 + 全局 theme + 根 layout",
+          "description": "安装 antd @ant-design/nextjs-registry，配置 tailwind.config 扩展 primary 色板，创建共享 theme.ts，更新每个 app 的 layout.tsx 包裹 AntdRegistry + ConfigProvider，配置 antd Menu 导航",
+          "subtasks": [
+            "安装 antd 到所有 app 和 ui-components 包",
+            "安装 @ant-design/nextjs-registry 到根目录",
+            "创建 tailwind.config.ts 扩展 primary 色板（所有 app 共用）",
+            "创建 packages/ui-components/src/theme.tsx 导出 ConfigProvider 配置",
+            "更新所有 app layout.tsx：包裹 AntdRegistry + ThemeProvider + antd Layout(Sider/Header/Content)",
+            "更新所有 app globals.css：调整背景色为 primary-50",
+            "废弃 @enterprise-ai/ui 中 Button/Card/Spinner，标记 deprecated"
+          ],
+          "files": ["frontend/packages/ui-components/", "frontend/apps/*/src/app/layout.tsx", "frontend/apps/*/src/app/globals.css"],
+          "dependsOn": [],
+          "status": "completed"
+        },
+        "task-4.2": {
+          "title": "改造登录页（admin-console + chat-ui）",
+          "description": "替换原生 input 为 antd Input/Input.Password/Button/Form，居中卡片式，错误用 message 组件",
+          "subtasks": [
+            "admin-console login：Card + Form + Input + Input.Password + Button + message",
+            "chat-ui login：同样改造",
+            "背景 primary-50，卡片白色圆角阴影"
+          ],
+          "files": ["frontend/apps/admin-console/src/app/login/page.tsx", "frontend/apps/chat-ui/src/app/login/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        },
+        "task-4.3": {
+          "title": "改造 Admin Console Dashboard",
+          "description": "用 antd Card + Statistic 替换自定义 Card，Table 展示最近会话，Select 切换时间范围",
+          "subtasks": [
+            "Dashboard 指标卡片：antd Card + Statistic（带箭头变化趋势）",
+            "Token 趋势图占位",
+            "模型调用排行 Table",
+            "最近会话 Table"
+          ],
+          "files": ["frontend/apps/admin-console/src/app/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        },
+        "task-4.4": {
+          "title": "改造 Admin Console 管理页（users/models/tools/analytics）",
+          "description": "标准 CRUD 页面：antd Table + Input.Search + Button + Modal Form + Pagination",
+          "subtasks": [
+            "users 用户管理页：Table + Modal(新建/编辑) + Popconfirm(删除)",
+            "models 模型管理页：Table + Modal Form + Tag(状态)",
+            "tools 工具管理页：Table + Modal Form + 限流/熔断配置",
+            "analytics 运营分析页：Statistic 卡片 + Table"
+          ],
+          "files": ["frontend/apps/admin-console/src/app/users/page.tsx", "frontend/apps/admin-console/src/app/models/page.tsx", "frontend/apps/admin-console/src/app/tools/page.tsx", "frontend/apps/admin-console/src/app/analytics/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        },
+        "task-4.5": {
+          "title": "改造 Chat UI 聊天页面",
+          "description": "antd Layout.Sider(Menu 会话列表) + Content(消息区 + 输入区)，消息气泡 Tailwind，Markdown 渲染保留",
+          "subtasks": [
+            "Layout.Sider：Menu 展示会话列表 + New Chat 按钮",
+            "Content Header：Agent 选择器 Select + 模型切换 Select",
+            "消息列表：用户蓝色气泡(右) + AI 白色气泡(左) + Tool Collapse",
+            "输入区：Input.TextArea + Upload(文件) + Button(Send)"
+          ],
+          "files": ["frontend/apps/chat-ui/src/app/page.tsx", "frontend/apps/chat-ui/src/app/chat/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        },
+        "task-4.6": {
+          "title": "改造 Agent Studio（agents/marketplace/skills/prompts/multi-agent）",
+          "description": "antd Card 卡片列表 + Segmented 视图切换 + Tag 状态",
+          "subtasks": [
+            "agents 列表页：Card 卡片 + Tag(Published/Test/Draft) + Create Agent 按钮",
+            "agents/new 创建页：Form（Prompt/Tool/Skill/Memory/模型绑定）",
+            "marketplace 市场页：Card 列表 + 搜索 + 安装按钮",
+            "skills 技能页：Card 列表 + Segmented 切换",
+            "prompts 提示词页：Card 列表 + AB Test Tag",
+            "multi-agent 多 Agent 页：流程图占位"
+          ],
+          "files": ["frontend/apps/agent-studio/src/app/page.tsx", "frontend/apps/agent-studio/src/app/*/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        },
+        "task-4.7": {
+          "title": "改造 Trace Console + RAG Studio",
+          "description": "Trace Console: antd Table + Collapse 链路详情。RAG Studio: Input.Search + Card 召回结果",
+          "subtasks": [
+            "Trace Console：Statistic 汇总 + Table 会话列表 + Collapse 展开 span 详情",
+            "RAG Studio：Input.Search + Card 列表展示 chunk 召回结果"
+          ],
+          "files": ["frontend/apps/trace-console/src/app/page.tsx", "frontend/apps/rag-studio/src/app/page.tsx"],
+          "dependsOn": ["task-4.1"],
+          "status": "completed"
+        }
+      }
+    },
 
+    "phase1_mvp": {
     "phase1_mvp": {
       "name": "Phase 1 — MVP (Chat + RAG + Tool + Multi-tenant + Model)",
       "goal": "多租户 AI 聊天平台，支持基础 RAG、Tool 调用、多模型切换",

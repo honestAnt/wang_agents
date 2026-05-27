@@ -72,7 +72,7 @@ class AgentEngine:
                 full_response += delta
                 yield {
                     "event": "delta",
-                    "data": json.dumps({"content": delta}),
+                    "data": json.dumps({"content": delta}, ensure_ascii=False),
                 }
 
             span.set_attribute("response_length", str(len(full_response)))
@@ -83,7 +83,7 @@ class AgentEngine:
                     "session_id": sid,
                     "model": selected_model,
                     "intent": intent,
-                }),
+                }, ensure_ascii=False),
             }
 
         # Save to short-term memory
