@@ -219,4 +219,18 @@ class TestRetriever:
         retriever = Retriever()
         result = await retriever.search("t1", "kb1", "test query")
         assert isinstance(result, list)
-        assert len(result) == 0  # placeholder returns empty
+
+    @pytest.mark.asyncio
+    async def test_search_with_filters(self):
+        retriever = Retriever()
+        result = await retriever.search(
+            "t1", "kb1", "test",
+            permission_filters={"department": "engineering"},
+        )
+        assert isinstance(result, list)
+
+    @pytest.mark.asyncio
+    async def test_search_no_rerank(self):
+        retriever = Retriever()
+        result = await retriever.search("t1", "kb1", "test", enable_rerank=False)
+        assert isinstance(result, list)
