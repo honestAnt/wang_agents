@@ -169,7 +169,8 @@ kafka:
 
 # ── Observability ───────────────────────────────────────────
 observability:
-  langfuse:
+  jaeger:
+    endpoint: "http://jaeger-collector:4317"
     enabled: true
   otelCollector:
     enabled: true

@@ -82,13 +82,21 @@ class Span:
 
 
 class JaegerSpanExporter:
-    """Exports spans to Jaeger via OTLP gRPC."""
+    """Exports spans to Jaeger via OTLP gRPC.
+
+    Configured via environment variables:
+      JAEGER_ENDPOINT     — OTLP gRPC endpoint (default: http://localhost:4317)
+      JAEGER_SERVICE_NAME — service name in Jaeger UI (default: agent-python-runtime)
+      JAEGER_INSECURE     — use plaintext connection (default: true)
+    """
 
     def __init__(self):
         self._provider = None
         self._tracer = None
         self._jaeger_available = False
         self._endpoint = os.getenv("JAEGER_ENDPOINT", os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"))
+        self._service_name = os.getenv("JAEGER_SERVICE_NAME", "agent-python-runtime")
+        self._insecure = os.getenv("JAEGER_INSECURE", "true").lower() in ("true", "1", "yes")
         self._init_otlp()
 
     def _init_otlp(self):
@@ -99,15 +107,16 @@ class JaegerSpanExporter:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
-            resource = Resource.create({SERVICE_NAME: "agent-python-runtime"})
-            exporter = OTLPSpanExporter(endpoint=self._endpoint, insecure=True)
+            resource = Resource.create({SERVICE_NAME: self._service_name})
+            exporter = OTLPSpanExporter(endpoint=self._endpoint, insecure=self._insecure)
             provider = TracerProvider(resource=resource)
             provider.add_span_processor(BatchSpanProcessor(exporter))
 
             self._provider = provider
-            self._tracer = provider.get_tracer("agent-python")
+            self._tracer = provider.get_tracer(self._service_name)
             self._jaeger_available = True
-            logger.info("Jaeger OTLP exporter connected to %s", self._endpoint)
+            logger.info("Jaeger OTLP exporter connected to %s (service=%s, insecure=%s)",
+                        self._endpoint, self._service_name, self._insecure)
         except ImportError:
             logger.warning(
                 "opentelemetry-exporter-otlp not installed. "
