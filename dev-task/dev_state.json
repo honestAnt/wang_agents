@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
-  "phase": "planning",
-  "lastUpdated": "2026-05-27T20:00:00+08:00",
-  "status": "production-ready: completed LlamaIndex+Qdrant KB engine — 7 new modules, 64 tests, full ingestion+retrieval pipeline",
+  "phase": "refactoring",
+  "lastUpdated": "2026-05-27T21:30:00+08:00",
+  "status": "Java monolith consolidation: 14 microservices → single agent-application with AutoConfiguration modules",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -12,7 +12,9 @@
     "CLAUDE.md initialization",
     "Task breakdown",
     "README.md (English)",
-    "README.zh-CN.md (Chinese)"
+    "README.zh-CN.md (Chinese)",
+    "Java monolith consolidation: 14 microservices → single agent-application with spring.factories AutoConfiguration",
+    "One-click local startup script (scripts/start-local.sh)"
   ],
 
   "phases": {

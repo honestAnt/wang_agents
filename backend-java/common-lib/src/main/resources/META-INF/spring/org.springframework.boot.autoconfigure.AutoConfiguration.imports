@@ -1,2 +1,0 @@
-com.enterpriseai.common.trace.OpenTelemetryConfig
-com.enterpriseai.common.trace.TracingAutoConfiguration

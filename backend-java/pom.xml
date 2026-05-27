@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <name>Enterprise AI Platform — Backend Java Parent</name>
-    <description>Parent POM for all Java microservices</description>
+    <description>Parent POM — single deployable with modular libraries</description>
 
     <modules>
         <module>common-lib</module>
@@ -20,7 +20,6 @@
         <module>rag-service</module>
         <module>tool-service</module>
         <module>agent-service</module>
-        <module>gateway-service</module>
         <module>trace-service</module>
         <module>skill-service</module>
         <module>memory-service</module>
@@ -28,6 +27,7 @@
         <module>billing-service</module>
         <module>admin-service</module>
         <module>audit-service</module>
+        <module>agent-application</module>
     </modules>
 
     <properties>
@@ -64,6 +64,71 @@
             <dependency>
                 <groupId>com.enterpriseai</groupId>
                 <artifactId>common-lib</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>auth-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>user-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>model-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>rag-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>tool-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>agent-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>skill-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>memory-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>prompt-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>trace-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>billing-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>admin-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.enterpriseai</groupId>
+                <artifactId>audit-service</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

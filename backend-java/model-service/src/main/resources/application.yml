@@ -1,9 +1,5 @@
-server:
-  port: 8083
 
 spring:
-  application:
-    name: model-service
   security:
     oauth2:
       resourceserver:
@@ -21,7 +17,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    table: flyway_schema_history_model
 
 management:
   endpoints:

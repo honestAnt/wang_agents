@@ -1,9 +1,5 @@
-server:
-  port: 8089
 
 spring:
-  application:
-    name: memory-service
   security:
     oauth2:
       resourceserver:
@@ -19,7 +15,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    table: flyway_schema_history_memory
 
 management:
   endpoints:

@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 必须遵守
-
+- 你只能在这个仓库工作，不能随便读取、删除或者编辑其他非本仓库的文件
 - dev-task 和 dev-map 两个目录下的文件坚决不能删除
 - 每次工作完都要更新工作进度，工作进度文件放在 dev-task 下面的 dev_state.json 中；编译和测试通过后提交代码到git仓库
 - 每次新会话开始都要读取 dev-task/dev_state.json 中的进度，然后继续开始

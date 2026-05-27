@@ -1,9 +1,5 @@
-server:
-  port: 8085
 
 spring:
-  application:
-    name: tool-service
   security:
     oauth2:
       resourceserver:
@@ -20,7 +16,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    table: flyway_schema_history_tool
 
 management:
   endpoints:

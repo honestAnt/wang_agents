@@ -1,9 +1,5 @@
-server:
-  port: 8090
 
 spring:
-  application:
-    name: admin-service
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:wang_agent}
     username: ${POSTGRES_USER:wang_agent}

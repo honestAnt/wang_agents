@@ -1,9 +1,5 @@
-server:
-  port: 8091
 
 spring:
-  application:
-    name: audit-service
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:wang_agent}
     username: ${POSTGRES_USER:wang_agent}

@@ -1,9 +1,5 @@
-server:
-  port: 8091
 
 spring:
-  application:
-    name: billing-service
   security:
     oauth2:
       resourceserver:
@@ -18,7 +14,6 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
-    table: flyway_schema_history_billing
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
