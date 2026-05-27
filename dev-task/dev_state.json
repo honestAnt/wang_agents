@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "planning",
-  "lastUpdated": "2026-05-26T18:00:00+08:00",
-  "status": "all phases completed (39/39 tasks done)",
+  "lastUpdated": "2026-05-27T12:00:00+08:00",
+  "status": "architecture-refactor: replaced LiteLLM with AgentScope ModelWrapper",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -100,7 +100,7 @@
         },
 
         "task-1.6": {
-          "title": "model-service：模型注册与治理（LiteLLM 控制面）",
+          "title": "model-service：模型注册与治理（AgentScope ModelWrapper）",
           "description": "模型接入管理，API Key 管理，Quota/Budget 控制，路由策略配置",
           "subtasks": [
             "设计 + 迁移表：models, model_providers, api_keys, quotas, budgets",
@@ -181,7 +181,7 @@
             "实现 Tool Executor（app/core/executor/）— 调 Java tool-service / MCP client",
             "实现 Context Builder（app/core/context/）— 组装 System Prompt + Memory + RAG 上下文",
             "实现 Chat API（app/api/chat.py）— POST /chat 支持流式 SSE 输出",
-            "实现 LiteLLM Client 封装（app/llm/litellm_client.py）— 统一调用多模型",
+            "实现 AgentScope ModelWrapper 封装（app/llm/model_wrapper.py）— 统一调用多模型",
             "实现 Model Router（app/llm/model_router.py）— 按 task 类型/成本选模型",
             "实现全链路 Trace 打点（app/trace/tracer.py）— 每个 span 记录 trace_id/span_id/type/latency/cost",
             "编写 Dockerfile"

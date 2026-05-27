@@ -15,7 +15,7 @@
   - billing-service: 4 (BillingService 2 + BillingController 2)
   - trace-service: 4 (TraceController)
 - Python: 59 tests across 10 modules
-  - intent_router: 8 | tracer: 6 | model_router: 6 | litellm_client: 4
+  - intent_router: 8 | tracer: 6 | model_router: 6 | model_wrapper: 4
   - memory: 4 | main(FastAPI): 2 | skill: 5 | multi_agent: 9
   - rag(embedding/reranker/permission/retriever): 7 | long_memory: 6 | executor: 2
 - TypeScript: tsc --noEmit passed (6 apps + 4 packages)
@@ -131,7 +131,7 @@ pnpm exec next build
 - JWT 鉴权过滤器 / 租户级限流 / CORS / WebSocket 代理
 
 ### 10-12. agent-python + frontend
-- Python: engine loop, intent router, LiteLLM client, tracer
+- Python: engine loop, intent router, model wrapper, tracer
 - Frontend: login page render, chat page SSE, dashboard metrics
 
 ---

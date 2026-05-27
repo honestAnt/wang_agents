@@ -6,7 +6,7 @@ Routes LLM requests to the best model based on:
 - Cost budget (cheapest model that meets quality requirements)
 - Model availability (auto-fallback on failure)
 
-Inspired by: LiteLLM Router, Portkey AI Gateway
+Inspired by: Portkey AI Gateway
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 sse-starlette>=2.0.0
-litellm>=1.40.0
+agentscope>=1.0.0
 llama-index>=0.10.0
 qdrant-client>=1.9.0
 redis>=5.0.0

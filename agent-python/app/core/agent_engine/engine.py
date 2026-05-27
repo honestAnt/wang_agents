@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from app.core.context.builder import ContextBuilder
 from app.core.router.intent_router import IntentRouter
 from app.llm.model_router import ModelRouter
+from app.llm.model_wrapper import ModelWrapper
 from app.memory.short_term import ShortTermMemory
 from app.trace.tracer import tracer
 
@@ -18,6 +19,7 @@ class AgentEngine:
         self.context_builder = ContextBuilder()
         self.intent_router = IntentRouter()
         self.model_router = ModelRouter()
+        self.model_wrapper = ModelWrapper()
         self.short_term_memory = ShortTermMemory()
 
     async def run(
@@ -49,18 +51,31 @@ class AgentEngine:
             preferred_model=model,
         )
 
-        # Step 4: Reason — call LLM
+        # Step 4: Call LLM via AgentScope ModelWrapper
         with tracer.start_span("llm.call", parent_id=tracer.current_span_id) as span:
             span.set_attribute("model", selected_model)
             span.set_attribute("intent", intent)
 
-            yield {
-                "event": "delta",
-                "data": json.dumps({"content": f"[Agent thinking... intent={intent}, model={selected_model}]"}),
-            }
+            # Assemble messages for the model
+            messages = context.get("messages", [])
+            if not messages:
+                system_prompt = context.get("system_prompt", "You are an enterprise AI assistant.")
+                messages = [{"role": "system", "content": system_prompt}]
+            messages.append({"role": "user", "content": user_message})
 
-            # Placeholder for actual LLM streaming
-            # In production, call LiteLLM client: response = await litellm_client.chat(...)
+            full_response = ""
+            async for delta in self.model_wrapper.chat(
+                messages=messages,
+                model=selected_model,
+                stream=True,
+            ):
+                full_response += delta
+                yield {
+                    "event": "delta",
+                    "data": json.dumps({"content": delta}),
+                }
+
+            span.set_attribute("response_length", str(len(full_response)))
 
             yield {
                 "event": "done",

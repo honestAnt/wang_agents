@@ -54,14 +54,14 @@ PRD / 架构设计文档在 `dev-map/` 目录（.docx 格式）。
 ```
 User → Chat UI → API Gateway → AgentScope Runtime
   → Intent Router → Skill Engine → Memory → RAG → Tool Mesh
-  → Model Gateway (LiteLLM) → LLM Provider → Response Stream → Trace
+  → Model Gateway (AgentScope) → LLM Provider → Response Stream → Trace
 ```
 
 ### 技术栈
 
 - **前端**: Next.js (TypeScript), Ant Design Pro, Turborepo
 - **后端**: Spring Boot 3.3, Java 21, Maven, Flyway, Keycloak
-- **AI 运行时**: FastAPI + AgentScope + LiteLLM + LlamaIndex
+- **AI 运行时**: FastAPI + AgentScope + LlamaIndex
 - **数据**: PostgreSQL 15, Redis 7, Kafka, OpenSearch, Qdrant, MinIO
 - **工作流**: Temporal
 - **可观测性**: OpenTelemetry + Langfuse + Jaeger + Grafana

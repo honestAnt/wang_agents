@@ -18,7 +18,7 @@ An enterprise-grade, multi-tenant AI Agent platform built on [AgentScope](https:
 | **Agent Runtime** | AgentScope-powered execution loop (reason → act → observe), planner, router, executor |
 | **Skills System** | `Prompt + Tool + Workflow` capability encapsulation with dynamic loading, hot reload, and versioning |
 | **Tool Registry** | Unified enterprise tool hub supporting HTTP/MCP/SDK/Workflow tools with rate limiting, circuit breaking, and auditing |
-| **Model Gateway** | LiteLLM-based multi-model governance (GPT, Claude, Gemini, Qwen, DeepSeek, vLLM, Ollama) with quota, budget, routing, and fallback |
+| **Model Gateway** | AgentScope-based multi-model governance (GPT, Claude, Gemini, Qwen, DeepSeek, vLLM, Ollama) with quota, budget, routing, and fallback |
 | **Memory System** | Short-term (Redis + sliding context) + Long-term (PostgreSQL + vector memory) — episodic, semantic, procedural |
 | **Multi-Tenancy** | tenant_id–based isolation at DB, index, and vector levels; RBAC + ABAC permission model |
 | **Trace & Audit** | Full-chain trace (User → Agent → Skill → RAG → Tool → LLM), OpenTelemetry + Langfuse, cost tracking, AI replay, prompt injection detection |
@@ -32,7 +32,7 @@ Frontend (Next.js)
       → Python Agent Runtime (AgentScope + FastAPI)
         → RAG Engine (LlamaIndex + Qdrant/Milvus)
         → Tool Mesh (MCP + internal APIs)
-        → Model Gateway (LiteLLM → LLM providers)
+        → Model Gateway (AgentScope → LLM providers)
         → Trace (OpenTelemetry + Langfuse)
 
 Data Layer: PostgreSQL / Redis / OpenSearch / Qdrant|Milvus / Kafka / MinIO
@@ -56,7 +56,7 @@ Data Layer: PostgreSQL / Redis / OpenSearch / Qdrant|Milvus / Kafka / MinIO
 
 ### AI Runtime (Python)
 - **AgentScope** — agent execution engine
-- **LiteLLM** — model gateway (unified API, fallback, routing, cost tracking)
+- **AgentScope ModelWrapper** — model gateway (unified API, fallback, routing, cost tracking)
 - **LlamaIndex** — RAG engine
 - **Qdrant** (dev/test) / **Milvus** (production) — vector database
 - **Langfuse** — LLM observability
@@ -115,7 +115,7 @@ enterprise-ai-platform/
 │       ├── tools/         # tool_client, mcp_client, internal_tools
 │       ├── rag/           # retriever, reranker, embedding
 │       ├── memory/        # short_term, long_term, vector_memory
-│       ├── llm/           # litellm_client, model_router
+│       ├── llm/           # model_wrapper, model_router
 │       ├── trace/         # tracer, exporter
 │       └── api/           # chat, agent, debug
 ├── sdk/                   # Internal SDKs
@@ -123,7 +123,6 @@ enterprise-ai-platform/
 │   ├── python-sdk/
 │   └── openapi/
 ├── infra/                 # Infrastructure configs
-│   ├── lite-llm-proxy/
 │   ├── mcp-servers/
 │   ├── vector-db/
 │   ├── search/
@@ -142,7 +141,7 @@ enterprise-ai-platform/
 **Goal**: Multi-tenant AI chat platform with basic RAG, tool calling, and multi-model switching
 - Monorepo setup + Docker Compose local infrastructure
 - Core Java microservices (auth, user, model, rag, tool, agent, gateway, trace)
-- Python Agent Runtime (AgentScope + FastAPI + LiteLLM + LlamaIndex)
+- Python Agent Runtime (AgentScope + FastAPI + LlamaIndex)
 - Frontend: Login, Chat UI, Dashboard, Agent/Model/KB management, Trace Console
 
 ### Phase 2 — Advanced

@@ -1,6 +1,6 @@
 # Python Agent Runtime
 
-基于 AgentScope 的 Agent 执行引擎，FastAPI + LiteLLM + LlamaIndex。
+基于 AgentScope 的 Agent 执行引擎，FastAPI + LlamaIndex。
 
 ## 结构
 
@@ -27,7 +27,7 @@ agent-python/
 │   │   │   └── client.py            # WorkflowClient 生命周期管理
 │   │   └── security/prompt_guard.py # Prompt Injection 检测 + 数据脱敏
 │   ├── llm/
-│   │   ├── litellm_client.py        # LiteLLM 统一调用
+│   │   ├── model_wrapper.py         # AgentScope 模型包装器
 │   │   ├── model_router.py          # 智能路由 (cost/fallback/stats)
 │   │   └── task_classifier.py       # 任务分类器 (10 种类型)
 │   ├── rag/

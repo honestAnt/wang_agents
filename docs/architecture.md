@@ -9,7 +9,7 @@ Frontend (Next.js)
       → Python Agent Runtime (AgentScope + FastAPI)
         → RAG Engine (LlamaIndex + Qdrant)
         → Tool Mesh (MCP + internal APIs)
-        → Model Gateway (LiteLLM → LLM providers)
+        → Model Gateway (AgentScope → LLM providers)
         → Trace (OpenTelemetry + Langfuse)
 ```
 
@@ -21,7 +21,7 @@ User → Chat UI → API Gateway → AgentScope Runtime
   → Memory Service (Redis + PostgreSQL)
   → RAG Service (LlamaIndex Hybrid Search)
   → Tool Mesh (MCP Server → Enterprise APIs)
-  → Model Gateway (LiteLLM → LLM Provider)
+  → Model Gateway (AgentScope → LLM Provider)
   → Response Stream → Trace Service
 ```
 
@@ -38,7 +38,7 @@ User → Chat UI → API Gateway → AgentScope Runtime
 | **搜索** | OpenSearch (全文搜索) |
 | **向量** | Qdrant |
 | **存储** | MinIO (S3-compatible) |
-| **AI 运行时** | AgentScope, FastAPI, LiteLLM, LlamaIndex |
+| **AI 运行时** | AgentScope, FastAPI, LlamaIndex |
 | **工作流** | Temporal |
 | **可观测性** | OpenTelemetry, Langfuse, Jaeger, Grafana |
 | **部署** | Kubernetes, Docker, Helm, GitHub Actions |

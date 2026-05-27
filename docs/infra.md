@@ -7,7 +7,6 @@
 ```
 infra/
 ├── temporal/         # Temporal Server + UI (docker-compose)
-├── lite-llm-proxy/   # LiteLLM 代理配置
 ├── mcp-servers/      # MCP Server 配置
 ├── message-queue/    # Kafka 配置
 ├── observability/    # OpenTelemetry Collector / Grafana

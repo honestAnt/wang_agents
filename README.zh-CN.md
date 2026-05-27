@@ -18,7 +18,7 @@
 | **Agent Runtime** | 基于 AgentScope 的执行循环（reason → act → observe），Planner / Router / Executor |
 | **Skills 系统** | `Prompt + Tool + Workflow` 能力封装，支持动态加载、热更新、版本管理和技能市场 |
 | **Tool Registry** | 统一企业工具接入中心，支持 HTTP/MCP/SDK/Workflow 工具，含限流/熔断/审计 |
-| **模型网关** | 基于 LiteLLM 的多模型治理（GPT、Claude、Gemini、Qwen、DeepSeek、vLLM、Ollama），支持 Quota、Budget、路由、Fallback |
+| **模型网关** | 基于 AgentScope 的多模型治理（GPT、Claude、Gemini、Qwen、DeepSeek、vLLM、Ollama），支持 Quota、Budget、路由、Fallback |
 | **Memory 系统** | 短期记忆（Redis + 滑动上下文窗口）+ 长期记忆（PostgreSQL + 向量记忆）— 情景/语义/过程三类记忆 |
 | **多租户** | tenant_id 级别的 DB/索引/向量三级数据隔离；RBAC + ABAC 权限模型 |
 | **Trace & Audit** | 全链路追踪（用户 → Agent → Skill → RAG → Tool → LLM），OpenTelemetry + Langfuse，成本统计，AI 回放，Prompt 注入检测 |
@@ -32,7 +32,7 @@
       → Python Agent Runtime (AgentScope + FastAPI)
         → RAG 引擎 (LlamaIndex + Qdrant/Milvus)
         → 工具网格 (MCP + 内部 API)
-        → 模型网关 (LiteLLM → LLM 厂商)
+        → 模型网关 (AgentScope → LLM 厂商)
         → 链路追踪 (OpenTelemetry + Langfuse)
 
 数据层: PostgreSQL / Redis / OpenSearch / Qdrant|Milvus / Kafka / MinIO
@@ -56,7 +56,7 @@
 
 ### AI Runtime (Python)
 - **AgentScope** — Agent 执行引擎
-- **LiteLLM** — 模型网关（统一 API / Fallback / 路由 / 成本追踪）
+- **AgentScope ModelWrapper** — 模型网关（统一 API / Fallback / 路由 / 成本追踪）
 - **LlamaIndex** — RAG 引擎
 - **Qdrant**（开发/测试）/ **Milvus**（生产）— 向量数据库
 - **Langfuse** — LLM 可观测性
@@ -115,7 +115,7 @@ enterprise-ai-platform/
 │       ├── tools/         # tool_client, mcp_client, internal_tools
 │       ├── rag/           # retriever, reranker, embedding
 │       ├── memory/        # short_term, long_term, vector_memory
-│       ├── llm/           # litellm_client, model_router
+│       ├── llm/           # model_wrapper, model_router
 │       ├── trace/         # tracer, exporter
 │       └── api/           # chat, agent, debug
 ├── sdk/                   # 内部 SDK
@@ -123,7 +123,6 @@ enterprise-ai-platform/
 │   ├── python-sdk/
 │   └── openapi/
 ├── infra/                 # 基础设施配置
-│   ├── lite-llm-proxy/
 │   ├── mcp-servers/
 │   ├── vector-db/
 │   ├── search/
@@ -142,7 +141,7 @@ enterprise-ai-platform/
 **目标**：多租户 AI 聊天平台，支持基础 RAG、Tool 调用、多模型切换
 - Monorepo 搭建 + Docker Compose 本地开发环境
 - 核心 Java 微服务（auth, user, model, rag, tool, agent, gateway, trace）
-- Python Agent Runtime（AgentScope + FastAPI + LiteLLM + LlamaIndex）
+- Python Agent Runtime（AgentScope + FastAPI + LlamaIndex）
 - 前端：登录页、聊天工作台、Dashboard、Agent/模型/KB 管理、Trace 控制台
 
 ### Phase 2 — 进阶
