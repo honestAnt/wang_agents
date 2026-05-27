@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "refactoring",
-  "lastUpdated": "2026-05-27T18:00:00+08:00",
-  "status": "Fixed 7 frontend pages to use antd unified theme (replaced @enterprise-ai/ui old components + native HTML)",
+  "lastUpdated": "2026-05-27T19:30:00+08:00",
+  "status": "完成 Skills 和 Tools 管理功能的后端API完善 + 前端页面接入真实API + 导航菜单",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",

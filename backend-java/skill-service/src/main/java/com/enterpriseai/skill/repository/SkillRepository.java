@@ -14,4 +14,9 @@ public interface SkillRepository extends JpaRepository<Skill, String> {
     List<Skill> findByTenantIdAndStatus(String tenantId, String status);
 
     List<Skill> findByTenantIdAndCategory(String tenantId, String category);
+
+    List<Skill> findByTenantIdAndName(String tenantId, String name);
+
+    List<Skill> findByTenantIdAndNameContainingIgnoreCaseOrDisplayNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(
+            String tenantId, String name, String displayName, String description, String category);
 }

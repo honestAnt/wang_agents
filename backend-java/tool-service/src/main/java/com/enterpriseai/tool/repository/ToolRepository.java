@@ -12,4 +12,8 @@ public interface ToolRepository extends JpaRepository<Tool, String> {
     List<Tool> findByTenantId(String tenantId);
 
     List<Tool> findByTenantIdAndToolType(String tenantId, String toolType);
+
+    List<Tool> findByTenantIdAndName(String tenantId, String name);
+
+    List<Tool> findByTenantIdAndStatus(String tenantId, String status);
 }

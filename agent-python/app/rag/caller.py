@@ -20,7 +20,7 @@ class RerankerClient:
 
     Usage::
 
-        client = RerankerClient("http://localhost:5000")
+        client = RerankerClient("http://localhost:6000")
         scores = await client.rerank("query", ["doc1", "doc2"])
         # -> [3.48, -7.10]
     """

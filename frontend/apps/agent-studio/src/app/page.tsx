@@ -4,17 +4,9 @@ import { useState } from "react";
 import { Card, Button, Tag, Segmented, Input, Typography, Row, Col, Space } from "antd";
 import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import { agents, statusColors } from "./agents/data";
 
 const { Title, Text } = Typography;
-
-const agents = [
-  { key: "1", name: "Lab Assistant", desc: "Research & analysis agent with RAG", status: "Published" as const },
-  { key: "2", name: "Customer Service Bot", desc: "FAQ, order lookup, complaint handling", status: "Test" as const },
-  { key: "3", name: "Data Analyst", desc: "Excel/CSV analysis, chart generation", status: "Draft" as const },
-  { key: "4", name: "Code Reviewer", desc: "PR review, static analysis, security scan", status: "Draft" as const },
-];
-
-const statusColors: Record<string, string> = { Published: "green", Test: "blue", Draft: "default" };
 
 export default function AgentStudioPage() {
   const [view, setView] = useState("card");

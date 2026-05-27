@@ -21,7 +21,7 @@
 | **模型网关** | 基于 AgentScope 的多模型治理（GPT、Claude、Gemini、Qwen、DeepSeek、vLLM、Ollama），支持 Quota、Budget、路由、Fallback |
 | **Memory 系统** | 短期记忆（Redis + 滑动上下文窗口）+ 长期记忆（PostgreSQL + 向量记忆）— 情景/语义/过程三类记忆 |
 | **多租户** | tenant_id 级别的 DB/索引/向量三级数据隔离；RBAC + ABAC 权限模型 |
-| **Trace & Audit** | 全链路追踪（用户 → Agent → Skill → RAG → Tool → LLM），OpenTelemetry + Langfuse，成本统计，AI 回放，Prompt 注入检测 |
+| **Trace & Audit** | 全链路追踪（用户 → Agent → Skill → RAG → Tool → LLM），OpenTelemetry + jaeger，成本统计，AI 回放，Prompt 注入检测 |
 
 ## 架构总览
 
@@ -33,7 +33,7 @@
         → RAG 引擎 (LlamaIndex + Qdrant/Milvus)
         → 工具网格 (MCP + 内部 API)
         → 模型网关 (AgentScope → LLM 厂商)
-        → 链路追踪 (OpenTelemetry + Langfuse)
+        → 链路追踪 (OpenTelemetry + jaeger)
 
 数据层: PostgreSQL / Redis / OpenSearch / Qdrant|Milvus / Kafka / MinIO
 ```
