@@ -130,6 +130,9 @@ Desktop.ini
 # Helm
 deploy/helm/**/charts/*.tgz
 
+# Misplaced META-INF
+/META-INF/
+
 # Logs
 *.log
 logs/
