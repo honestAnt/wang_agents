@@ -1,8 +1,8 @@
 {
   "project": "企业级智能体平台 (Enterprise Agent Platform)",
   "phase": "refactoring",
-  "lastUpdated": "2026-05-27T21:30:00+08:00",
-  "status": "Java monolith consolidation: 14 microservices → single agent-application with AutoConfiguration modules",
+  "lastUpdated": "2026-05-27T22:00:00+08:00",
+  "status": "Reranker remote backend + caller.py: RerankerClient with POST /rerank, recall() with LLM fallback",
   "completed": [
     "PRD documentation (dev-map/企业智能体prd.docx)",
     "Technical architecture design (dev-map/企业智能体技术架构.docx)",
@@ -14,7 +14,8 @@
     "README.md (English)",
     "README.zh-CN.md (Chinese)",
     "Java monolith consolidation: 14 microservices → single agent-application with spring.factories AutoConfiguration",
-    "One-click local startup script (scripts/start-local.sh)"
+    "One-click local startup script (scripts/start-local.sh)",
+    "Reranker remote backend + RerankerClient + recall() with LLM fallback"
   ],
 
   "phases": {

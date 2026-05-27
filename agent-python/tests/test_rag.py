@@ -254,3 +254,108 @@ class TestRetriever:
         retriever = Retriever()
         result = await retriever.search("t1", "kb1", "test", enable_rerank=False)
         assert isinstance(result, list)
+
+
+class TestRerankerRemote:
+    """Tests for the remote reranker backend."""
+
+    def test_remote_backend_explicit(self):
+        """Explicit remote backend is recognised."""
+        r = Reranker(backend="remote", remote_url="http://localhost:5000")
+        assert r._resolve_backend() == "remote"
+
+    def test_remote_backend_detected_by_env(self, monkeypatch):
+        """Remote backend auto-detected when RERANKER_REMOTE_URL is set."""
+        monkeypatch.setenv("RERANKER_REMOTE_URL", "http://rerank-svc:5000")
+        r = Reranker()
+        assert r._resolve_backend() == "remote"
+
+    def test_remote_backend_detected_by_constructor(self):
+        """Remote backend auto-detected when remote_url is passed."""
+        r = Reranker(remote_url="http://localhost:5000")
+        assert r._resolve_backend() == "remote"
+
+    def test_remote_ranks_higher_than_heuristic_in_resolution(self, monkeypatch):
+        """When RERANKER_REMOTE_URL is set, remote should be picked over local/heuristic."""
+        monkeypatch.setenv("RERANKER_REMOTE_URL", "http://localhost:5000")
+        r = Reranker()
+        # Should pick remote even if COHERE_API_KEY is also present
+        assert r._resolve_backend() == "remote"
+
+
+class TestCaller:
+    """Tests for caller.py — RerankerClient and recall()."""
+
+    @pytest.mark.asyncio
+    async def test_client_rerank_returns_scores(self, httpx_mock):
+        from app.rag.caller import RerankerClient
+        httpx_mock.add_response(
+            url="http://localhost:5000/rerank",
+            method="POST",
+            json={"scores": [3.48, -7.10, 1.2]},
+        )
+        client = RerankerClient("http://localhost:5000")
+        scores = await client.rerank("test query", ["doc1", "doc2", "doc3"])
+        assert scores == [3.48, -7.10, 1.2]
+
+    def test_client_rerank_sync_returns_scores(self, httpx_mock):
+        from app.rag.caller import RerankerClient
+        httpx_mock.add_response(
+            url="http://localhost:5000/rerank",
+            method="POST",
+            json={"scores": [3.48, -7.10]},
+        )
+        client = RerankerClient("http://localhost:5000")
+        scores = client.rerank_sync("test", ["doc1", "doc2"])
+        assert scores == [3.48, -7.10]
+
+    @pytest.mark.asyncio
+    async def test_recall_ranks_and_truncates(self, httpx_mock):
+        from app.rag.caller import RerankerClient, recall
+        httpx_mock.add_response(
+            url="http://localhost:5000/rerank",
+            method="POST",
+            json={"scores": [0.1, 0.9, 0.5, 0.3]},
+        )
+        client = RerankerClient("http://localhost:5000")
+        candidates = [
+            {"content": "doc A"},
+            {"content": "doc B"},
+            {"content": "doc C"},
+            {"content": "doc D"},
+        ]
+        result = await recall("query", candidates, client, top_k=2)
+        assert len(result) == 2
+        # doc B (0.9) should be first
+        assert result[0]["content"] == "doc B"
+        assert result[0]["rerank_score"] == 0.9
+
+    @pytest.mark.asyncio
+    async def test_recall_falls_back_to_llm(self, httpx_mock):
+        from app.rag.caller import RerankerClient, recall
+        httpx_mock.add_response(
+            url="http://localhost:5000/rerank",
+            method="POST",
+            status_code=503,
+        )
+
+        def fake_llm(query, docs):
+            return [0.8, 0.2]
+
+        client = RerankerClient("http://localhost:5000")
+        candidates = [{"content": "doc A"}, {"content": "doc B"}]
+        result = await recall("query", candidates, client, fake_llm, top_k=2)
+        assert len(result) == 2
+        assert result[0]["rerank_score"] == 0.8
+
+    @pytest.mark.asyncio
+    async def test_recall_empty_candidates(self):
+        from app.rag.caller import RerankerClient, recall
+        client = RerankerClient("http://localhost:5000")
+        result = await recall("query", [], client)
+        assert result == []
+
+    def test_client_base_url_strips_trailing_slash(self):
+        from app.rag.caller import RerankerClient
+        client = RerankerClient("http://localhost:5000/")
+        assert client._base == "http://localhost:5000"

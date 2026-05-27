@@ -2,6 +2,7 @@
 
 Backends (auto-detected, in priority order):
   flagembedding — BAAI FlagEmbedding FlagReranker (local, free, best quality)
+  remote        — call a separate reranker service via POST /rerank
   local         — sentence-transformers cross-encoder fallback
   cohere        — Cohere Rerank API
   jina          — Jina Reranker API
@@ -27,6 +28,7 @@ class Reranker:
     """
 
     BACKEND_FLAGEMBEDDING = "flagembedding"
+    BACKEND_REMOTE = "remote"
     BACKEND_LOCAL = "local"
     BACKEND_COHERE = "cohere"
     BACKEND_JINA = "jina"
@@ -39,10 +41,12 @@ class Reranker:
         model: str | None = None,
         backend: str | None = None,
         top_k: int = 5,
+        remote_url: str | None = None,
     ):
         self.model = model or self.DEFAULT_MODEL
         self._top_k = top_k
         self._backend: str | None = backend
+        self._remote_url: str | None = remote_url
         self._reranker: Any = None  # lazy-loaded FlagReranker or CrossEncoder
 
     # ── Public API ────────────────────────────────────────────
@@ -72,6 +76,8 @@ class Reranker:
             except Exception as e:
                 logger.warning("FlagEmbedding failed, falling back to heuristic: %s", e)
                 scores = self._rerank_heuristic(query, chunks)
+        elif backend == self.BACKEND_REMOTE:
+            scores = await self._rerank_remote(query, chunks)
         elif backend == self.BACKEND_LOCAL:
             scores = await self._rerank_local(query, chunks)
         elif backend == self.BACKEND_COHERE:
@@ -97,7 +103,9 @@ class Reranker:
         if self._backend:
             return self._backend
 
-        # Check env-driven API backends
+        # Check env-driven backends
+        if self._remote_url or os.getenv("RERANKER_REMOTE_URL"):
+            return self.BACKEND_REMOTE
         if os.getenv("COHERE_API_KEY"):
             return self.BACKEND_COHERE
         if os.getenv("JINA_API_KEY"):
@@ -182,6 +190,33 @@ class Reranker:
                 scores = [0.5] * len(scores)
 
         return scores
+
+    # ── Remote reranker service ─────────────────────────────────
+
+    async def _rerank_remote(self, query: str, chunks: list[dict]) -> list[float]:
+        """Call an external reranker service via POST /rerank."""
+        import httpx
+
+        url = self._remote_url or os.getenv("RERANKER_REMOTE_URL", "http://localhost:5000")
+        documents = [c.get("content", "") for c in chunks]
+
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            response = await client.post(
+                f"{url.rstrip('/')}/rerank",
+                headers={"Content-Type": "application/json"},
+                json={"query": query, "documents": documents},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        scores: list[float] = data.get("scores", [])
+        if len(scores) != len(chunks):
+            logger.warning(
+                "Remote reranker returned %d scores for %d chunks; padding with 0.0",
+                len(scores), len(chunks),
+            )
+            scores += [0.0] * (len(chunks) - len(scores))
+        return [float(s) for s in scores]
 
     # ── Heuristic (zero-dependency) ────────────────────────────
 
