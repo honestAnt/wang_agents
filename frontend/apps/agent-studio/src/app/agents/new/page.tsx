@@ -1,44 +1,84 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card } from "@enterprise-ai/ui";
+import { Card, Button, Input, Select, Form, Space, Typography, App } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+
+const { Title } = Typography;
+const { TextArea } = Input;
 
 export default function NewAgentPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [model, setModel] = useState("gpt-4.1");
+  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
+  const { message } = App.useApp();
+
+  const onFinish = (values: Record<string, unknown>) => {
+    setLoading(true);
+    setTimeout(() => {
+      message.success("Agent saved as draft");
+      setLoading(false);
+      router.push("/");
+    }, 500);
+  };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create Agent</h1>
+    <div className="p-6 max-w-3xl mx-auto">
+      <div className="mb-6">
+        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.back()} className="mb-2">
+          Back
+        </Button>
+        <Title level={3} style={{ margin: 0 }}>Create Agent</Title>
+      </div>
+
       <Card>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full border rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">System Prompt</label>
-            <textarea rows={6} value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)}
-              className="w-full border rounded px-3 py-2 font-mono text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Model</label>
-            <select value={model} onChange={(e) => setModel(e.target.value)}
-              className="w-full border rounded px-3 py-2">
-              <option value="gpt-4.1">GPT-4.1</option>
-              <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
-              <option value="deepseek-v3">DeepSeek V3</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => router.back()} variant="secondary">Cancel</Button>
-            <Button onClick={() => router.push("/")}>Save Draft</Button>
-          </div>
-        </div>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          initialValues={{ model: "gpt-4.1" }}
+        >
+          <Form.Item
+            name="name"
+            label="Agent Name"
+            rules={[{ required: true, message: "Please enter agent name" }]}
+          >
+            <Input placeholder="e.g. Lab Assistant" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            name="systemPrompt"
+            label="System Prompt"
+            rules={[{ required: true, message: "Please enter system prompt" }]}
+          >
+            <TextArea rows={6} placeholder="You are an enterprise AI assistant..." />
+          </Form.Item>
+
+          <Form.Item name="model" label="Default Model">
+            <Select
+              options={[
+                { value: "gpt-4.1", label: "GPT-4.1" },
+                { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+                { value: "deepseek-v3", label: "DeepSeek V3" },
+                { value: "qwen-max", label: "Qwen Max" },
+              ]}
+            />
+          </Form.Item>
+
+          <Form.Item name="description" label="Description">
+            <TextArea rows={2} placeholder="Brief description of this agent..." />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Save Draft
+              </Button>
+              <Button onClick={() => router.back()}>Cancel</Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Card>
     </div>
   );

@@ -14,6 +14,7 @@
     "@enterprise-ai/auth": "workspace:*",
     "@enterprise-ai/ui": "workspace:*",
     "@enterprise-ai/utils": "workspace:*",
+    "@ant-design/icons": "^6.2.3",
     "antd": "^6.4.3",
     "next": "^15.0.0",
     "react": "^19.0.0",

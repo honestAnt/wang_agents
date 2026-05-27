@@ -1,62 +1,112 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card } from "@enterprise-ai/ui";
+import { Card, Button, Input, Select, Typography, Steps, Form, App } from "antd";
+import { UserOutlined, ApiOutlined, DatabaseOutlined } from "@ant-design/icons";
 
-const STEPS = ["Create Admin Account", "Configure AI Model", "Setup Storage"];
+const { Title, Text } = Typography;
+
+const STEPS = [
+  { title: "Create Admin Account", icon: <UserOutlined /> },
+  { title: "Configure AI Model", icon: <ApiOutlined /> },
+  { title: "Setup Storage", icon: <DatabaseOutlined /> },
+];
 
 export default function SetupPage() {
   const [step, setStep] = useState(0);
+  const [form] = Form.useForm();
+  const { message } = App.useApp();
+
+  const onFinish = () => {
+    if (step < 2) {
+      setStep(step + 1);
+      form.resetFields();
+    } else {
+      message.success("Setup complete! Redirecting...");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-lg">
-        <h1 className="text-2xl font-bold mb-2">First-Time Setup</h1>
-        <p className="text-gray-500 mb-6">Configure your enterprise AI platform</p>
-
-        <div className="flex mb-6">
-          {STEPS.map((s, i) => (
-            <div key={s} className={`flex-1 text-center text-sm ${i <= step ? "text-blue-600" : "text-gray-400"}`}>
-              <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-white text-sm mb-1 ${i <= step ? "bg-blue-600" : "bg-gray-300"}`}>
-                {i + 1}
-              </div>
-              {s}
-            </div>
-          ))}
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "#F0F5FF" }}>
+      <Card className="w-full max-w-lg shadow-md" styles={{ body: { padding: 32 } }}>
+        <div className="text-center mb-6">
+          <Title level={2} style={{ margin: 0 }}>First-Time Setup</Title>
+          <Text type="secondary">Configure your enterprise AI platform</Text>
         </div>
 
-        <div className="min-h-[200px]">
+        <Steps
+          current={step}
+          items={STEPS.map((s) => ({ title: s.title }))}
+          size="small"
+          className="mb-8"
+        />
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          className="min-h-[200px]"
+        >
           {step === 0 && (
-            <div className="space-y-3">
-              <input type="text" placeholder="Admin username" className="w-full border rounded px-3 py-2" />
-              <input type="email" placeholder="Admin email" className="w-full border rounded px-3 py-2" />
-              <input type="password" placeholder="Password" className="w-full border rounded px-3 py-2" />
-            </div>
+            <>
+              <Form.Item name="username" label="Admin Username" rules={[{ required: true }]}>
+                <Input placeholder="admin" />
+              </Form.Item>
+              <Form.Item name="email" label="Admin Email" rules={[{ required: true, type: "email" }]}>
+                <Input placeholder="admin@company.com" />
+              </Form.Item>
+              <Form.Item name="password" label="Password" rules={[{ required: true, min: 8 }]}>
+                <Input.Password placeholder="Min 8 characters" />
+              </Form.Item>
+            </>
           )}
-          {step === 1 && (
-            <div className="space-y-3">
-              <select className="w-full border rounded px-3 py-2">
-                <option>OpenAI (GPT-4.1)</option>
-                <option>Anthropic (Claude Sonnet 4.6)</option>
-                <option>DeepSeek V3</option>
-              </select>
-              <input type="text" placeholder="API Key" className="w-full border rounded px-3 py-2" />
-            </div>
-          )}
-          {step === 2 && (
-            <div className="space-y-3">
-              <input type="text" placeholder="MinIO Endpoint (http://localhost:9000)" className="w-full border rounded px-3 py-2" />
-              <input type="text" placeholder="Qdrant Endpoint (http://localhost:6333)" className="w-full border rounded px-3 py-2" />
-            </div>
-          )}
-        </div>
 
-        <div className="flex justify-between mt-6">
-          <Button variant="secondary" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</Button>
-          <Button onClick={() => step < 2 ? setStep(step + 1) : window.location.href = "/"}>
-            {step < 2 ? "Next" : "Finish Setup"}
-          </Button>
-        </div>
+          {step === 1 && (
+            <>
+              <Form.Item name="provider" label="Model Provider" rules={[{ required: true }]}>
+                <Select
+                  options={[
+                    { value: "openai", label: "OpenAI (GPT-4.1)" },
+                    { value: "anthropic", label: "Anthropic (Claude Sonnet 4.6)" },
+                    { value: "deepseek", label: "DeepSeek V3" },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="apiKey" label="API Key" rules={[{ required: true }]}>
+                <Input.Password placeholder="sk-..." />
+              </Form.Item>
+              <Form.Item name="baseUrl" label="Base URL (optional)">
+                <Input placeholder="https://api.openai.com/v1" />
+              </Form.Item>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <Form.Item name="minioEndpoint" label="MinIO Endpoint">
+                <Input placeholder="http://localhost:9000" />
+              </Form.Item>
+              <Form.Item name="qdrantEndpoint" label="Qdrant Endpoint">
+                <Input placeholder="http://localhost:6333" />
+              </Form.Item>
+              <Form.Item name="redisEndpoint" label="Redis Endpoint">
+                <Input placeholder="localhost:6379" />
+              </Form.Item>
+            </>
+          )}
+
+          <div className="flex justify-between mt-6">
+            <Button disabled={step === 0} onClick={() => setStep(step - 1)}>
+              Back
+            </Button>
+            <Button type="primary" htmlType="submit">
+              {step < 2 ? "Next" : "Finish Setup"}
+            </Button>
+          </div>
+        </Form>
       </Card>
     </div>
   );

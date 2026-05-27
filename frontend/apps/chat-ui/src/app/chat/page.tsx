@@ -3,7 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@enterprise-ai/auth";
 import { apiClient } from "@enterprise-ai/api-client";
-import { Button } from "@enterprise-ai/ui";
+import { Button, Select, Input, Avatar, Spin, Typography, Space } from "antd";
+import { SendOutlined, PlusOutlined, RobotOutlined, UserOutlined } from "@ant-design/icons";
+
+const { Text, Title } = Typography;
 
 interface Message { role: "user" | "assistant"; content: string; }
 
@@ -97,37 +100,111 @@ export default function ChatPage() {
     }
   };
 
+  const modelOptions = models.map(m => ({ value: m.name, label: m.name }));
+
   return (
     <main className="flex h-screen">
-      <aside className="w-64 bg-gray-900 text-white p-4 flex flex-col">
-        <h1 className="text-xl font-bold mb-4">Enterprise AI</h1>
-        <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}
-          className="bg-gray-800 text-white rounded px-2 py-1 mb-4 text-sm">
-          {models.map(m => (
-            <option key={m.name} value={m.name}>{m.name}</option>
-          ))}
-        </select>
-        <Button variant="secondary" onClick={() => setMessages([])} className="w-full text-sm">New Chat</Button>
-      </aside>
-      <section className="flex-1 flex flex-col">
-        <div className="flex-1 p-6 overflow-y-auto space-y-4">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[70%] rounded-lg px-4 py-2 ${m.role === "user" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-900"}`}>
-                {m.content}
-              </div>
-            </div>
-          ))}
-          {streaming && <div className="text-gray-400 text-sm">AI is thinking...</div>}
-          <div ref={messagesEnd} />
+      <aside className="w-64 flex flex-col" style={{ background: "#001529" }}>
+        <div className="px-4 py-4">
+          <Title level={5} style={{ color: "#fff", margin: 0 }}>Enterprise AI</Title>
+          <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 12 }}>Chat Platform</Text>
         </div>
-        <div className="border-t p-4">
-          <div className="flex gap-2">
-            <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Type your message..."
-              className="flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <Button onClick={handleSend} disabled={streaming}>Send</Button>
+
+        <div className="px-3 mb-3">
+          <Select
+            value={selectedModel}
+            onChange={setSelectedModel}
+            options={modelOptions}
+            style={{ width: "100%" }}
+            size="small"
+            popupMatchSelectWidth={false}
+          />
+        </div>
+
+        <div className="px-3">
+          <Button
+            type="default"
+            ghost
+            icon={<PlusOutlined />}
+            block
+            onClick={() => setMessages([])}
+          >
+            New Chat
+          </Button>
+        </div>
+      </aside>
+
+      <section className="flex-1 flex flex-col" style={{ background: "#F0F5FF" }}>
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="max-w-3xl mx-auto space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center py-20">
+                <RobotOutlined className="text-6xl mb-4" style={{ color: "#BFDBFE" }} />
+                <Title level={4} style={{ color: "#BFBFBF" }}>Select a model and start a conversation.</Title>
+              </div>
+            )}
+
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className="flex gap-3 max-w-[80%]">
+                  {m.role === "assistant" && (
+                    <Avatar icon={<RobotOutlined />} style={{ backgroundColor: "#4096FF", flexShrink: 0 }} />
+                  )}
+                  <div
+                    className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
+                    style={
+                      m.role === "user"
+                        ? { background: "linear-gradient(135deg, #4096FF, #1677FF)", color: "#fff" }
+                        : { background: "#fff", border: "1px solid #f0f0f0", boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }
+                    }
+                  >
+                    {m.content}
+                  </div>
+                  {m.role === "user" && (
+                    <Avatar icon={<UserOutlined />} style={{ backgroundColor: "#1677FF", flexShrink: 0 }} />
+                  )}
+                </div>
+              </div>
+            ))}
+            {streaming && (
+              <div className="flex justify-start">
+                <div className="flex gap-3 items-center">
+                  <Avatar icon={<RobotOutlined />} style={{ backgroundColor: "#4096FF" }} />
+                  <Spin size="small" />
+                  <Text type="secondary" className="text-sm">AI is thinking...</Text>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEnd} />
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderTop: "1px solid #f0f0f0", padding: "16px 24px" }}>
+          <div className="max-w-3xl mx-auto">
+            <Space.Compact style={{ width: "100%" }}>
+              <Input.TextArea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Type your message... (Enter to send, Shift+Enter to new line)"
+                autoSize={{ minRows: 1, maxRows: 5 }}
+                style={{ resize: "none" }}
+              />
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                onClick={handleSend}
+                loading={streaming}
+                disabled={!input.trim()}
+              >
+                Send
+              </Button>
+            </Space.Compact>
           </div>
         </div>
       </section>
