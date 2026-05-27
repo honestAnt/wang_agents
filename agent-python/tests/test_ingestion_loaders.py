@@ -43,3 +43,81 @@ class TestIngestResult:
         result = IngestResult(kb_id="kb1", document_count=3, chunk_count=12, vector_count=12)
         assert result.document_count == 3
         assert result.chunk_count == 12
+
+
+# ── Loader tests ──────────────────────────────────────────────
+
+import io
+import os
+import tempfile
+from app.rag.ingestion.loaders import TextLoader, MarkdownLoader, HTMLLoader, loader_for
+
+
+class TestTextLoader:
+    def test_loads_txt(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("hello world\nthis is a test document.")
+            path = f.name
+        try:
+            loader = TextLoader()
+            docs = loader.load(path)
+            assert len(docs) == 1
+            assert "hello world" in docs[0].content
+            assert docs[0].metadata["format"] == "txt"
+        finally:
+            os.unlink(path)
+
+    def test_loads_csv(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            f.write("name,age\nAlice,30\nBob,25")
+            path = f.name
+        try:
+            loader = TextLoader()
+            docs = loader.load(path)
+            assert len(docs) == 1
+            assert "Alice" in docs[0].content
+        finally:
+            os.unlink(path)
+
+
+class TestMarkdownLoader:
+    def test_loads_markdown(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("---\ntitle: My Doc\n---\n# Heading\n\nParagraph text.")
+            path = f.name
+        try:
+            loader = MarkdownLoader()
+            docs = loader.load(path)
+            assert len(docs) == 1
+            assert "Heading" in docs[0].content
+            assert docs[0].metadata.get("title") == "My Doc"
+        finally:
+            os.unlink(path)
+
+
+class TestHTMLLoader:
+    def test_loads_html(self):
+        loader = HTMLLoader()
+        html = b"<html><body><h1>Title</h1><p>Paragraph.</p></body></html>"
+        docs = loader.load_bytes(html, source="test.html")
+        assert len(docs) == 1
+        assert "Title" in docs[0].content
+        assert "Paragraph" in docs[0].content
+
+
+class TestLoaderFor:
+    def test_txt_returns_text_loader(self):
+        loader = loader_for("doc.txt")
+        assert isinstance(loader, TextLoader)
+
+    def test_md_returns_markdown_loader(self):
+        loader = loader_for("readme.md")
+        assert isinstance(loader, MarkdownLoader)
+
+    def test_html_returns_html_loader(self):
+        loader = loader_for("page.html")
+        assert isinstance(loader, HTMLLoader)
+
+    def test_unknown_returns_text_loader(self):
+        loader = loader_for("data.bin")
+        assert isinstance(loader, TextLoader)
