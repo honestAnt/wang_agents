@@ -44,7 +44,7 @@ start_backend() {
     $mvn_cmd -f backend-java/pom.xml clean package -q -DskipTests
     log "Build complete."
 
-    step "Starting Agent Application (single process on port 8080)"
+    step "Starting Agent Application (single process on port 9090)"
 
     local jar="backend-java/agent-application/target/agent-application-1.0.0-SNAPSHOT.jar"
     if [ ! -f "$jar" ]; then
@@ -55,7 +55,7 @@ start_backend() {
     nohup java -jar "$jar" > /tmp/agent-application.log 2>&1 &
     echo $! > "$PID_DIR/agent-application.pid"
 
-    log "Backend started: http://localhost:8080"
+    log "Backend started: http://localhost:9090"
     log "Logs: /tmp/agent-application.log"
 }
 
@@ -170,7 +170,7 @@ show_status() {
 
     echo ""
     echo "  Endpoints:"
-    echo "    Backend:        http://localhost:8080"
+    echo "    Backend:        http://localhost:9090"
     echo "    Agent Runtime:  http://localhost:8000/docs"
     echo "    Chat UI:        http://localhost:3000"
     echo ""

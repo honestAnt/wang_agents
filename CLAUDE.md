@@ -26,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [docs/infra.md](docs/infra.md) | 基础设施服务 (Temporal/Kafka/Qdrant 等) |
 | [docs/deploy.md](docs/deploy.md) | K8s Helm + CI/CD Pipeline |
 | [docs/shared.md](docs/shared.md) | 共享协议 (OpenAPI/Proto/Event/Trace) |
+| [docs/login.md](docs/login.md) | 登录系统账户说明|
 
 PRD / 架构设计文档在 `dev-map/` 目录（.docx 格式）。
 
