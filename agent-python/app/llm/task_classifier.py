@@ -1,9 +1,12 @@
-"""Task classifier — recognizes task type from user prompt for intelligent routing.
+"""Task classifier — hybrid keyword + LLM classification.
 
 Classifies prompts into: code, analysis, chat, search, translation, summarization,
-creative, math, data_science, and unknown.
+creative, math, data_science, and unknown. Uses keyword heuristics first,
+falling back to LLM classification for ambiguous cases.
 """
 
+import json
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -18,7 +21,7 @@ class ClassificationResult:
 
 
 class TaskClassifier:
-    """Heuristic + keyword-based task classifier. In production, use an LLM classifier."""
+    """Hybrid classifier: keyword heuristics + optional LLM refinement."""
 
     TASK_PATTERNS: dict[str, list[str]] = {
         "code": [
@@ -55,20 +58,26 @@ class TaskClassifier:
         ],
     }
 
-    # Complexity indicators
     COMPLEXITY_PATTERNS = {
         "high": [
             r"\b(multi-step|complex|sophisticated|advanced|enterprise|production|scalable|distributed|microservice|orchestrat|workflow|pipeline)\b",
-            r"```[\s\S]*```",  # code blocks
-            r".{500,}",  # long prompts
+            r"```[\s\S]*```",
+            r".{500,}",
         ],
         "low": [
             r"\b(simple|quick|easy|basic|straightforward|brief|short)\b",
         ],
     }
 
+    LLM_CLASSIFICATION_PROMPT = (
+        "Classify the following user prompt into EXACTLY ONE category.\n"
+        "Categories: code, analysis, chat, search, translation, summarization, creative, math, data_science.\n"
+        "Respond with ONLY the category name, nothing else.\n\n"
+        "Prompt: {prompt}\n\nCategory:"
+    )
+
     def classify(self, prompt: str) -> ClassificationResult:
-        """Classify a user prompt into a task type with confidence."""
+        """Classify a user prompt. Uses LLM refinement for low-confidence heuristic results."""
         prompt_lower = prompt.lower()
         scores: dict[str, float] = {}
         all_keywords: list[str] = []
@@ -79,33 +88,41 @@ class TaskClassifier:
             for pattern in patterns:
                 matches = re.findall(pattern, prompt_lower, re.IGNORECASE)
                 if matches:
-                    # More matches = higher confidence
                     score += min(len(matches), 3) * 0.33
                     matched.extend(matches[:3])
             if score > 0:
                 scores[task_type] = min(score, 1.0)
                 all_keywords.extend(matched)
 
+        complexity = self._classify_complexity(prompt)
+        estimated_tokens = self._estimate_tokens(prompt)
+
         if not scores:
             return ClassificationResult(
-                task_type="unknown",
-                confidence=0.0,
-                complexity=self._classify_complexity(prompt),
-                estimated_tokens=self._estimate_tokens(prompt),
+                task_type="unknown", confidence=0.0,
+                complexity=complexity, estimated_tokens=estimated_tokens,
             )
 
-        # Pick highest confidence type
         best_type = max(scores, key=scores.get)
+        best_score = min(scores[best_type], 1.0)
+
+        # For low-confidence results, refine via LLM
+        if best_score < 0.5 and len(scores) > 1:
+            refined = self._classify_with_llm(prompt)
+            if refined and refined in self.TASK_PATTERNS:
+                return ClassificationResult(
+                    task_type=refined, confidence=0.6,
+                    complexity=complexity, estimated_tokens=estimated_tokens,
+                    keywords_matched=list(set(all_keywords))[:10],
+                )
+
         return ClassificationResult(
-            task_type=best_type,
-            confidence=round(min(scores[best_type], 1.0), 2),
-            complexity=self._classify_complexity(prompt),
-            estimated_tokens=self._estimate_tokens(prompt),
+            task_type=best_type, confidence=round(best_score, 2),
+            complexity=complexity, estimated_tokens=estimated_tokens,
             keywords_matched=list(set(all_keywords))[:10],
         )
 
     def _classify_complexity(self, prompt: str) -> str:
-        """Estimate task complexity: low, medium, or high."""
         prompt_lower = prompt.lower()
         prompt_len = len(prompt)
 
@@ -113,7 +130,6 @@ class TaskClassifier:
             if re.search(pattern, prompt_lower, re.IGNORECASE | re.DOTALL):
                 return "high"
 
-        # Long prompts are at least medium
         if prompt_len > 300:
             return "medium"
 
@@ -124,5 +140,34 @@ class TaskClassifier:
         return "medium"
 
     def _estimate_tokens(self, prompt: str) -> int:
-        """Rough token count estimate (~4 chars per token for English)."""
         return max(1, len(prompt) // 4)
+
+    def _classify_with_llm(self, prompt: str) -> str | None:
+        """Use a lightweight LLM to classify ambiguous prompts."""
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return None
+
+        async def _do():
+            from app.llm.model_wrapper import ModelWrapper
+            wrapper = ModelWrapper()
+            classifier_prompt = self.LLM_CLASSIFICATION_PROMPT.format(prompt=prompt[:1000])
+            result = ""
+            async for chunk in wrapper.chat(
+                messages=[{"role": "user", "content": classifier_prompt}],
+                model=os.getenv("CLASSIFIER_MODEL", "claude-haiku-4-5-20251001"),
+                temperature=0.0,
+                max_tokens=20,
+                stream=False,
+            ):
+                result += chunk
+            return result.strip().lower()
+
+        try:
+            if loop.is_running():
+                return None  # can't nest async calls
+            return loop.run_until_complete(_do())
+        except Exception:
+            return None

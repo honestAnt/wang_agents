@@ -1,17 +1,35 @@
-"""Skill router — intent-based skill matching and chain execution."""
+"""Skill router — queries Java skill-service for intent-based skill matching and chaining."""
+
+import logging
+import os
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class SkillRouter:
-    """Routes user intent to registered skills, supports multi-skill chaining."""
+    """Routes user intent to registered skills via Java skill-service, supports multi-skill chaining."""
+
+    def __init__(self):
+        self._skill_service_url = os.getenv("SKILL_SERVICE_URL", "http://localhost:8088")
 
     async def match(self, intent: str, tenant_id: str) -> list[dict]:
         """Find skills matching the given intent for a tenant.
 
-        In production, calls Java skill-service to query published skills
-        that match the intent category. Supports multi-skill chains.
+        Queries Java skill-service for published skills that match the intent category.
+        Returns skill definitions including prompt templates and tool chains.
         """
-        # Placeholder: return empty list — production queries skill-service
-        return []
+        async with httpx.AsyncClient(timeout=10) as client:
+            try:
+                url = f"{self._skill_service_url}/api/skills/match"
+                resp = await client.get(url, params={"intent": intent, "tenant_id": tenant_id})
+                resp.raise_for_status()
+                data = resp.json()
+                return data.get("skills", data if isinstance(data, list) else [])
+            except Exception as e:
+                logger.warning("Skill match failed for intent=%s: %s", intent, e)
+                return []
 
     async def execute_chain(self, skill_ids: list[str], context: dict) -> dict:
         """Execute a chain of skills in sequence.
@@ -24,5 +42,13 @@ class SkillRouter:
         return result
 
     async def _execute_skill(self, skill_id: str, context: dict) -> dict:
-        """Execute a single skill with its prompt template and tool chain."""
-        return {"skill_id": skill_id, "status": "placeholder"}
+        """Execute a single skill via the skill-service execution endpoint."""
+        async with httpx.AsyncClient(timeout=60) as client:
+            try:
+                url = f"{self._skill_service_url}/api/skills/{skill_id}/execute"
+                resp = await client.post(url, json=context)
+                resp.raise_for_status()
+                return resp.json()
+            except Exception as e:
+                logger.error("Skill execution failed for skill=%s: %s", skill_id, e)
+                return {"skill_id": skill_id, "status": "error", "error": str(e)}

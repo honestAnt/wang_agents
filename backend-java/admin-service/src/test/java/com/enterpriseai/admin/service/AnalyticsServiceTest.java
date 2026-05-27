@@ -1,6 +1,7 @@
 package com.enterpriseai.admin.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AnalyticsServiceTest {
 
-    private final AnalyticsService service = new AnalyticsService();
+    private final AnalyticsService service = new AnalyticsService(
+            new RestTemplateBuilder(), "http://localhost:8085", "http://localhost:8087");
 
     @Test
     void getUsageSummary_shouldReturnAllFields() {

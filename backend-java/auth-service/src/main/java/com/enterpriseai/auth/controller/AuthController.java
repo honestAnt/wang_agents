@@ -10,15 +10,20 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,35 +35,84 @@ public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    /**
-     * Login — in production this would delegate to Keycloak's token endpoint.
-     * For local development / MVP, we return mock tokens.
-     */
+    private final RestTemplate restTemplate;
+
+    @Value("${keycloak.realm:enterprise-ai}")
+    private String realm;
+
+    @Value("${keycloak.client-id:enterprise-ai-client}")
+    private String clientId;
+
+    @Value("${keycloak.client-secret:}")
+    private String clientSecret;
+
+    @Value("${keycloak.auth-server-url:http://localhost:8080}")
+    private String keycloakUrl;
+
+    public AuthController(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder.build();
+    }
+
+    private String tokenEndpoint() {
+        return keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+    }
+
+    private String logoutEndpoint() {
+        return keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/logout";
+    }
+
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResponse<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user: {}", request.getUsername());
 
-        // In production, call Keycloak token endpoint:
-        // POST {keycloak-url}/realms/{realm}/protocol/openid-connect/token
-        // with grant_type=password, client_id, client_secret, username, password
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        TokenResponse token = TokenResponse.builder()
-                .accessToken("placeholder-jwt-token")
-                .refreshToken("placeholder-refresh-token")
-                .tokenType("Bearer")
-                .expiresIn(300)
-                .refreshExpiresIn(1800)
-                .scope("openid profile email")
-                .build();
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("grant_type", "password");
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+            body.add("username", request.getUsername());
+            body.add("password", request.getPassword());
 
-        return ApiResponse.ok(token);
+            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> tokenResponse = restTemplate.postForObject(
+                    tokenEndpoint(), entity, Map.class);
+
+            if (tokenResponse == null) {
+                throw new BusinessException(502, "Keycloak returned null response", HttpStatus.BAD_GATEWAY);
+            }
+
+            TokenResponse token = TokenResponse.builder()
+                    .accessToken((String) tokenResponse.get("access_token"))
+                    .refreshToken((String) tokenResponse.get("refresh_token"))
+                    .tokenType((String) tokenResponse.get("token_type"))
+                    .expiresIn(((Number) tokenResponse.get("expires_in")).intValue())
+                    .refreshExpiresIn(((Number) tokenResponse.getOrDefault("refresh_expires_in", 1800)).intValue())
+                    .scope((String) tokenResponse.getOrDefault("scope", "openid"))
+                    .build();
+
+            return ApiResponse.ok(token);
+        } catch (RestClientException e) {
+            log.error("Keycloak login failed: {}", e.getMessage());
+            throw BusinessException.unauthorized("Invalid credentials");
+        }
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(HttpServletRequest request) {
         String userId = SecurityContextHolder.getUserId();
         log.info("Logout for user: {}", userId);
-        // In production, call Keycloak logout endpoint to invalidate session
+
+        try {
+            restTemplate.postForEntity(logoutEndpoint(), null, Void.class);
+        } catch (Exception e) {
+            log.warn("Keycloak logout call failed (session may already be expired): {}", e.getMessage());
+        }
+
         return ApiResponse.ok(null);
     }
 
@@ -71,15 +125,38 @@ public class AuthController {
 
         log.info("Token refresh requested");
 
-        // In production, call Keycloak token endpoint with grant_type=refresh_token
-        TokenResponse token = TokenResponse.builder()
-                .accessToken("placeholder-new-jwt-token")
-                .refreshToken("placeholder-new-refresh-token")
-                .expiresIn(300)
-                .refreshExpiresIn(1800)
-                .build();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        return ApiResponse.ok(token);
+            MultiValueMap<String, String> formBody = new LinkedMultiValueMap<>();
+            formBody.add("grant_type", "refresh_token");
+            formBody.add("client_id", clientId);
+            formBody.add("client_secret", clientSecret);
+            formBody.add("refresh_token", refreshToken);
+
+            HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(formBody, headers);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> tokenResponse = restTemplate.postForObject(
+                    tokenEndpoint(), entity, Map.class);
+
+            if (tokenResponse == null) {
+                throw new BusinessException(502, "Keycloak returned null response", HttpStatus.BAD_GATEWAY);
+            }
+
+            TokenResponse token = TokenResponse.builder()
+                    .accessToken((String) tokenResponse.get("access_token"))
+                    .refreshToken((String) tokenResponse.get("refresh_token"))
+                    .expiresIn(((Number) tokenResponse.get("expires_in")).intValue())
+                    .refreshExpiresIn(((Number) tokenResponse.getOrDefault("refresh_expires_in", 1800)).intValue())
+                    .build();
+
+            return ApiResponse.ok(token);
+        } catch (RestClientException e) {
+            log.error("Keycloak refresh failed: {}", e.getMessage());
+            throw BusinessException.unauthorized("Invalid or expired refresh token");
+        }
     }
 
     @GetMapping("/me")

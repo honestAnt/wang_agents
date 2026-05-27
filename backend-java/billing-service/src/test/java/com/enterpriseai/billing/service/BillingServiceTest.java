@@ -2,9 +2,9 @@ package com.enterpriseai.billing.service;
 
 import com.enterpriseai.billing.entity.BillingRecord;
 import com.enterpriseai.billing.repository.BillingRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,11 +20,11 @@ class BillingServiceTest {
     @Mock
     private BillingRepository billingRepository;
 
-    @InjectMocks
-    private BillingService billingService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void record_shouldCreateBillingRecord() {
+        BillingService billingService = new BillingService(billingRepository, objectMapper);
         when(billingRepository.save(any(BillingRecord.class))).thenAnswer(inv -> inv.getArgument(0));
         BillingRecord result = billingService.record("t1", "u1", "a1", "gpt-4.1", "trace-1", 1000, 500, 0.06);
         assertEquals("gpt-4.1", result.getModel());
@@ -36,6 +36,7 @@ class BillingServiceTest {
 
     @Test
     void listByTenant_shouldReturnRecords() {
+        BillingService billingService = new BillingService(billingRepository, objectMapper);
         when(billingRepository.findByTenantId("t1")).thenReturn(List.of(new BillingRecord()));
         List<BillingRecord> result = billingService.listByTenant("t1");
         assertEquals(1, result.size());

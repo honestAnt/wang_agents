@@ -1,10 +1,18 @@
-"""Tool executor — executes registered tools via HTTP or MCP."""
+"""Tool executor — executes registered tools via HTTP to Java tool-service."""
+
+import logging
+import os
 
 import httpx
 
+logger = logging.getLogger(__name__)
+
 
 class ToolExecutor:
-    """Executes tool calls — HTTP tools, MCP tools, internal SDK tools."""
+    """Executes tool calls — resolves tool definitions from Java tool-service and proxies execution."""
+
+    def __init__(self):
+        self._tool_service_url = os.getenv("TOOL_SERVICE_URL", "http://localhost:8082")
 
     async def execute(
         self,
@@ -12,16 +20,46 @@ class ToolExecutor:
         parameters: dict,
         timeout_ms: int = 30000,
     ) -> dict:
-        """Execute a tool and return its response.
+        """Resolve tool definition from tool-service, then execute.
 
-        In production, this calls the Java tool-service to resolve
-        the tool definition and proxy the request.
+        Flow:
+          1. GET  /api/tools/resolve?name={tool_name}  → get tool endpoint + config
+          2. POST <resolved-endpoint>                  → execute the tool
         """
-        # Placeholder — production implementation calls tool-service
         async with httpx.AsyncClient(timeout=timeout_ms / 1000) as client:
-            # In production: call tool-service to resolve tool and get endpoint
-            return {
-                "status": "placeholder",
-                "tool_name": tool_name,
-                "parameters": parameters,
-            }
+            try:
+                resolve_url = f"{self._tool_service_url}/api/tools/resolve"
+                resolve_resp = await client.get(resolve_url, params={"name": tool_name})
+                resolve_resp.raise_for_status()
+                tool_def = resolve_resp.json()
+            except Exception as e:
+                logger.warning("Tool-service resolve failed for '%s': %s", tool_name, e)
+                return {
+                    "status": "error",
+                    "tool_name": tool_name,
+                    "error": f"Tool '{tool_name}' not found: {e}",
+                }
+
+            endpoint = tool_def.get("endpoint", "")
+            if not endpoint:
+                return {
+                    "status": "error",
+                    "tool_name": tool_name,
+                    "error": f"No endpoint configured for tool '{tool_name}'",
+                }
+
+            try:
+                exec_resp = await client.post(
+                    endpoint,
+                    json={"tool_name": tool_name, "parameters": parameters},
+                )
+                exec_resp.raise_for_status()
+                return exec_resp.json()
+            except Exception as e:
+                logger.error("Tool execution failed for '%s': %s", tool_name, e)
+                return {
+                    "status": "error",
+                    "tool_name": tool_name,
+                    "parameters": parameters,
+                    "error": str(e),
+                }

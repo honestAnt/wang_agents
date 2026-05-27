@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Card, Button, Spinner } from "@enterprise-ai/ui";
+import { useState, useCallback } from "react";
+import { Card, Button, Spinner, notification } from "@enterprise-ai/ui";
 
 interface MarketplaceAgent {
   id: string;
@@ -37,10 +37,12 @@ function StarRating({ rating }: { rating: number }) {
   return <span className="flex items-center gap-0.5">{stars}</span>;
 }
 
+const MARKETPLACE_API = process.env.NEXT_PUBLIC_MARKETPLACE_API_URL || "/api/marketplace";
+
 export default function MarketplacePage() {
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
 
   const filtered = MOCK_DATA.filter((agent) => {
     if (category !== "all" && agent.category !== category) return false;
@@ -49,12 +51,53 @@ export default function MarketplacePage() {
     return true;
   });
 
-  const handleInstall = async (id: string) => {
-    setLoading(true);
-    // In production: POST /api/marketplace/{id}/install
-    await new Promise(r => setTimeout(r, 500));
-    setLoading(false);
-  };
+  const handleInstall = useCallback(async (id: string) => {
+    setLoading(id);
+    try {
+      const response = await fetch(`${MARKETPLACE_API}/${id}/install`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Installation failed" }));
+        notification.error({ message: (error as any).message || "Failed to install agent" });
+        return;
+      }
+
+      notification.success({ message: "Agent installed successfully" });
+    } catch (err) {
+      notification.error({ message: "Network error — please try again" });
+    } finally {
+      setLoading(null);
+    }
+  }, []);
+
+  const renderAgentCard = (agent: MarketplaceAgent) => (
+    <Card key={agent.id} title={agent.tags.split(",")[0]} className="hover:shadow-md">
+      <p className="text-sm text-gray-500 mb-1">Category: {agent.category}</p>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {agent.tags.split(",").map((tag) => (
+          <span key={tag} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{tag.trim()}</span>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mb-3">
+        <StarRating rating={agent.ratingAvg} />
+        <span className="text-sm text-gray-400">({agent.ratingCount})</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-400">{agent.installCount.toLocaleString()} installs</span>
+        <Button
+          variant="secondary"
+          size="small"
+          onClick={() => handleInstall(agent.id)}
+          disabled={loading === agent.id}
+        >
+          {loading === agent.id ? <Spinner /> : "Install"}
+        </Button>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="p-8">
@@ -89,54 +132,21 @@ export default function MarketplacePage() {
         ))}
       </div>
 
-      {/* Popular section */}
+      {/* Most Popular */}
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">Most Popular</h2>
         <div className="grid grid-cols-3 gap-4">
           {[...MOCK_DATA]
             .sort((a, b) => b.installCount - a.installCount)
             .slice(0, 3)
-            .map((agent) => (
-              <Card key={agent.id} title={agent.tags.split(",")[0]} className="hover:shadow-md">
-                <p className="text-sm text-gray-500 mb-1">Category: {agent.category}</p>
-                <div className="flex items-center gap-2 mb-2">
-                  <StarRating rating={agent.ratingAvg} />
-                  <span className="text-sm text-gray-400">({agent.ratingCount})</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">{agent.installCount.toLocaleString()} installs</span>
-                  <Button variant="secondary" size="small" onClick={() => handleInstall(agent.id)} disabled={loading}>
-                    {loading ? <Spinner /> : "Install"}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+            .map(renderAgentCard)}
         </div>
       </section>
 
-      {/* All agents grid */}
+      {/* All Agents */}
       <h2 className="text-lg font-semibold mb-3">All Agents</h2>
       <div className="grid grid-cols-3 gap-4">
-        {filtered.map((agent) => (
-          <Card key={agent.id} title={agent.tags.split(",")[0]} className="hover:shadow-md">
-            <p className="text-sm text-gray-500 mb-1">Category: {agent.category}</p>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {agent.tags.split(",").map((tag) => (
-                <span key={tag} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{tag.trim()}</span>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <StarRating rating={agent.ratingAvg} />
-              <span className="text-sm text-gray-400">({agent.ratingCount})</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">{agent.installCount.toLocaleString()} installs</span>
-              <Button variant="secondary" size="small" onClick={() => handleInstall(agent.id)} disabled={loading}>
-                {loading ? <Spinner /> : "Install"}
-              </Button>
-            </div>
-          </Card>
-        ))}
+        {filtered.map(renderAgentCard)}
       </div>
 
       {filtered.length === 0 && (

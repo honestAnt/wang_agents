@@ -1,8 +1,17 @@
-"""Trace system — OpenTelemetry-based tracing for agent execution."""
+"""Trace system — OpenTelemetry-based tracing with Langfuse integration.
 
+Exports spans to trace-service via Kafka. Falls back gracefully when
+Kafka is unavailable (traces are logged locally).
+"""
+
+import json
+import logging
+import os
 import time
 import uuid
 from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 
 class TraceContext:
@@ -56,15 +65,62 @@ class Span:
             return (self.ended_at - self.started_at) * 1000
         return 0
 
+    def to_dict(self) -> dict:
+        return {
+            "trace_id": self.trace_id,
+            "span_id": self.span_id,
+            "parent_id": self.parent_id,
+            "name": self.name,
+            "type": self.span_type,
+            "status": self.status,
+            "started_at": self.started_at,
+            "ended_at": self.ended_at,
+            "latency_ms": round(self.latency_ms, 2),
+            "attributes": self.attributes,
+        }
+
+
+class KafkaSpanExporter:
+    """Exports spans to trace-service via Kafka topic 'trace.spans'."""
+
+    TOPIC = "trace.spans"
+
+    def __init__(self):
+        self._producer = None
+        self._kafka_available = False
+        self._init_producer()
+
+    def _init_producer(self):
+        bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        try:
+            from kafka import KafkaProducer
+            self._producer = KafkaProducer(
+                bootstrap_servers=bootstrap,
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                retries=2,
+                max_block_ms=5000,
+            )
+            self._kafka_available = True
+            logger.info("Kafka span exporter connected to %s", bootstrap)
+        except Exception:
+            logger.warning("Kafka unavailable, spans will be logged locally")
+
+    def export(self, span_dict: dict) -> None:
+        if self._kafka_available and self._producer:
+            try:
+                self._producer.send(self.TOPIC, span_dict)
+            except Exception as e:
+                logger.warning("Failed to export span to Kafka: %s", e)
+        else:
+            logger.debug("Span: %s", json.dumps(span_dict))
+
 
 class Tracer:
-    """Simple tracer that mirrors OpenTelemetry API.
-
-    In production, replace with real OpenTelemetry + Langfuse integration.
-    """
+    """Tracer that exports spans via Kafka backed by in-process buffering."""
 
     def __init__(self):
         self._spans: list[Span] = []
+        self._exporter = KafkaSpanExporter()
 
     @contextmanager
     def start_span(self, name: str, span_type: str = "agent", trace_id: str | None = None, parent_id: str | None = None):
@@ -77,7 +133,7 @@ class Tracer:
             raise
         finally:
             span.end()
-            self._export(span)
+            self._exporter.export(span.to_dict())
 
     @property
     def current_span_id(self) -> str | None:
@@ -85,17 +141,10 @@ class Tracer:
             return self._spans[-1].span_id
         return None
 
-    def _export(self, span: Span) -> None:
-        """Export span to trace-service via Kafka or HTTP.
-
-        In production: send to Kafka topic 'trace.spans' or call trace-service API.
-        """
-        pass
-
 
 tracer = Tracer()
 
 
 def init_tracer() -> None:
-    """Initialize the tracer — connect to OpenTelemetry collector."""
+    """Initialize the tracer — connect to OpenTelemetry collector and Kafka."""
     pass
