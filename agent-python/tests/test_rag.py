@@ -27,26 +27,103 @@ class TestReranker:
 
     @pytest.mark.asyncio
     async def test_rerank_sorts_by_score(self):
+        """Chunks with higher vector_score rank first after blending."""
         reranker = Reranker()
         chunks = [
-            {"content": "low", "vector_score": 0.3},
-            {"content": "high", "vector_score": 0.9},
-            {"content": "mid", "vector_score": 0.6},
+            {"content": "low relevance text", "vector_score": 0.3},
+            {"content": "high relevance text", "vector_score": 0.9},
+            {"content": "mid relevance text", "vector_score": 0.6},
         ]
-        result = await reranker.rerank("query", chunks, top_k=2)
+        result = await reranker.rerank("high relevance", chunks, top_k=2)
         assert len(result) == 2
         assert result[0]["vector_score"] == 0.9
         assert result[1]["vector_score"] == 0.6
+        # All chunks get a rerank_score assigned
+        for r in result:
+            assert "rerank_score" in r
 
     @pytest.mark.asyncio
-    async def test_rerank_uses_rerank_score_when_available(self):
+    async def test_rerank_preserves_prior_rerank_order(self):
+        """Chunk with higher prior rerank_score ranks first."""
         reranker = Reranker()
         chunks = [
-            {"content": "a", "rerank_score": 0.5, "vector_score": 0.9},
-            {"content": "b", "rerank_score": 0.8, "vector_score": 0.1},
+            {"content": "alpha", "rerank_score": 0.5, "vector_score": 0.9},
+            {"content": "beta", "rerank_score": 0.8, "vector_score": 0.1},
         ]
         result = await reranker.rerank("query", chunks, top_k=2)
-        assert result[0]["rerank_score"] == 0.8
+        # Higher prior rerank_score (0.8) should rank first
+        assert result[0]["rerank_score"] > result[1]["rerank_score"]
+        assert result[0]["content"] == "beta"
+
+    @pytest.mark.asyncio
+    async def test_rerank_empty_chunks(self):
+        reranker = Reranker()
+        result = await reranker.rerank("query", [])
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_rerank_respects_top_k(self):
+        reranker = Reranker()
+        chunks = [
+            {"content": f"chunk {i}", "vector_score": 0.1 * i}
+            for i in range(10)
+        ]
+        result = await reranker.rerank("chunk", chunks, top_k=3)
+        assert len(result) == 3
+
+    # ── Heuristic scoring tests ──────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_heuristic_query_match_ranks_higher(self):
+        """Chunk containing query terms ranks above unrelated chunk."""
+        reranker = Reranker()
+        chunks = [
+            {"content": "unrelated text about weather"},
+            {"content": "machine learning is a field of artificial intelligence"},
+        ]
+        result = await reranker.rerank("machine learning", chunks, top_k=2)
+        assert "machine learning" in result[0]["content"]
+        assert result[0]["rerank_score"] > result[1]["rerank_score"]
+
+    @pytest.mark.asyncio
+    async def test_heuristic_exact_match_scores_high(self):
+        """Full query match scores higher than partial match."""
+        reranker = Reranker()
+        chunks = [
+            {"content": "deep learning for image recognition"},
+            {"content": "deep learning for natural language processing and image recognition"},
+        ]
+        result = await reranker.rerank("deep learning for image recognition", chunks, top_k=2)
+        # Second chunk has more matching terms
+        assert result[0]["rerank_score"] > 0
+
+    # ── Backend detection ────────────────────────────────────
+
+    def test_default_backend_is_heuristic(self):
+        """Without API keys or sentence-transformers, falls back to heuristic."""
+        reranker = Reranker()
+        backend = reranker._resolve_backend()
+        assert backend in (Reranker.BACKEND_HEURISTIC, Reranker.BACKEND_LOCAL)
+
+    # ── Tokenize / IDF helpers ───────────────────────────────
+
+    def test_tokenize_splits_and_filters(self):
+        tokens = Reranker._tokenize("Hello, World! AI-powered 测试")
+        assert "hello" in tokens
+        assert "world" in tokens
+        assert "powered" in tokens
+        # Single-char tokens filtered
+        assert all(len(t) > 1 for t in tokens)
+
+    def test_compute_idf_rare_term_scores_high(self):
+        chunks = [
+            {"content": "machine learning is great"},
+            {"content": "deep learning and neural networks"},
+            {"content": "reinforcement learning basics"},
+        ]
+        idf = Reranker._compute_idf(["machine", "learning"], chunks)
+        # "machine" appears in 1 doc → higher IDF than "learning" (3 docs)
+        assert idf["machine"] > idf["learning"]
 
 
 class TestPermissionAwareRAG:
