@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@enterprise-ai/auth": "workspace:*",
+    "@ant-design/nextjs-registry": "^1.3.0",
     "@enterprise-ai/api-client": "workspace:*",
+    "@enterprise-ai/auth": "workspace:*",
     "@enterprise-ai/ui": "workspace:*",
     "@enterprise-ai/utils": "workspace:*",
+    "antd": "^6.4.3",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

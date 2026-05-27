@@ -1,29 +1,78 @@
 "use client";
 
-import { Card, Button } from "@enterprise-ai/ui";
+import { useState } from "react";
+import { Card, Button, Tag, Segmented, Input, Typography, Row, Col, Space } from "antd";
+import { PlusOutlined, SearchOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import Link from "next/link";
 
+const { Title, Text } = Typography;
+
+const agents = [
+  { key: "1", name: "Lab Assistant", desc: "Research & analysis agent with RAG", status: "Published" as const },
+  { key: "2", name: "Customer Service Bot", desc: "FAQ, order lookup, complaint handling", status: "Test" as const },
+  { key: "3", name: "Data Analyst", desc: "Excel/CSV analysis, chart generation", status: "Draft" as const },
+  { key: "4", name: "Code Reviewer", desc: "PR review, static analysis, security scan", status: "Draft" as const },
+];
+
+const statusColors: Record<string, string> = { Published: "green", Test: "blue", Draft: "default" };
+
 export default function AgentStudioPage() {
+  const [view, setView] = useState("card");
+  const [search, setSearch] = useState("");
+
+  const filtered = agents.filter((a) => !search || a.name.toLowerCase().includes(search.toLowerCase()));
+
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Agent Studio</h1>
-        <Link href="/agents/new"><Button>Create Agent</Button></Link>
+    <div className="p-6">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
+        <Title level={3} style={{ margin: 0 }}>Agent Studio</Title>
+        <Space>
+          <Input prefix={<SearchOutlined />} placeholder="Search agents..." value={search}
+            onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} allowClear />
+          <Segmented value={view} onChange={(v) => setView(v as string)}
+            options={[
+              { value: "card", icon: <AppstoreOutlined /> },
+              { value: "list", icon: <UnorderedListOutlined /> },
+            ]} />
+          <Link href="/agents/new">
+            <Button type="primary" icon={<PlusOutlined />}>Create Agent</Button>
+          </Link>
+        </Space>
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <Card title="Lab Assistant" className="cursor-pointer hover:shadow-md">
-          <p className="text-sm text-gray-500">Research & analysis agent with RAG</p>
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded mt-2 inline-block">Published</span>
-        </Card>
-        <Card title="Customer Service Bot" className="cursor-pointer hover:shadow-md">
-          <p className="text-sm text-gray-500">FAQ, order lookup, complaint handling</p>
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mt-2 inline-block">Test</span>
-        </Card>
-        <Card title="Data Analyst" className="cursor-pointer hover:shadow-md">
-          <p className="text-sm text-gray-500">Excel/CSV analysis, chart generation</p>
-          <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded mt-2 inline-block">Draft</span>
-        </Card>
-      </div>
+
+      {view === "card" ? (
+        <Row gutter={[16, 16]}>
+          {filtered.map((agent) => (
+            <Col xs={24} sm={12} lg={6} key={agent.key}>
+              <Card hoverable title={agent.name} extra={<Tag color={statusColors[agent.status]}>{agent.status}</Tag>}>
+                <Text type="secondary">{agent.desc}</Text>
+                <div className="mt-3">
+                  <Link href={`/agents/${agent.key}`}>
+                    <Button size="small">Edit</Button>
+                  </Link>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((agent) => (
+            <Card key={agent.key} size="small" hoverable>
+              <div className="flex justify-between items-center">
+                <div>
+                  <Text strong>{agent.name}</Text>
+                  <Text type="secondary" className="ml-3">{agent.desc}</Text>
+                </div>
+                <Space>
+                  <Tag color={statusColors[agent.status]}>{agent.status}</Tag>
+                  <Link href={`/agents/${agent.key}`}><Button size="small">Edit</Button></Link>
+                </Space>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

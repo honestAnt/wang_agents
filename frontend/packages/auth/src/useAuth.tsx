@@ -7,7 +7,7 @@ import type { JwtPayload } from "./types";
 interface AuthContextType {
   isAuthenticated: boolean;
   user: { userId: string; username: string; tenantId: string; roles: string[] } | null;
-  login: (token: string) => void;
+  login: (token: string, tenantId?: string) => void;
   logout: () => void;
 }
 
@@ -21,13 +21,14 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthContextType["user"]>(null);
 
-  const login = useCallback((token: string) => {
+  const login = useCallback((token: string, tenantId?: string) => {
     localStorage.setItem("access_token", token);
+    if (tenantId) localStorage.setItem("tenant_id", tenantId);
     const decoded = jwtDecode<JwtPayload>(token);
     setUser({
       userId: decoded.sub ?? "",
       username: decoded.preferred_username ?? "",
-      tenantId: decoded.tenant_id ?? "",
+      tenantId: tenantId ?? decoded.tenant_id ?? "",
       roles: decoded.realm_access?.roles ?? [],
     });
   }, []);
