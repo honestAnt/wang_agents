@@ -37,3 +37,8 @@ logging:
   level:
     com.enterpriseai: DEBUG
     org.springframework.security: INFO
+
+# Jaeger OTLP tracing
+jaeger:
+  endpoint: ${JAEGER_ENDPOINT:http://localhost:4317}
+  service-name: auth-service

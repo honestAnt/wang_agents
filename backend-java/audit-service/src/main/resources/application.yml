@@ -15,3 +15,8 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+
+# Jaeger OTLP tracing
+jaeger:
+  endpoint: ${JAEGER_ENDPOINT:http://localhost:4317}
+  service-name: audit-service

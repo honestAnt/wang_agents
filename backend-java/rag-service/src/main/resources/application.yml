@@ -27,3 +27,8 @@ management:
     web:
       exposure:
         include: health,info
+
+# Jaeger OTLP tracing
+jaeger:
+  endpoint: ${JAEGER_ENDPOINT:http://localhost:4317}
+  service-name: rag-service
