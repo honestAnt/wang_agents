@@ -1,10 +1,11 @@
 """Reranker — re-ranks retrieved chunks for relevance with multi-backend support.
 
 Backends (auto-detected, in priority order):
-  local     — sentence-transformers cross-encoder (BGE, etc.)
-  cohere    — Cohere Rerank API
-  jina      — Jina Reranker API
-  heuristic — TF-IDF–style word overlap with existing-score blending (no deps)
+  flagembedding — BAAI FlagEmbedding FlagReranker (local, free, best quality)
+  local         — sentence-transformers cross-encoder fallback
+  cohere        — Cohere Rerank API
+  jina          — Jina Reranker API
+  heuristic     — TF-IDF–style word overlap (zero deps, always available)
 """
 
 from __future__ import annotations
@@ -14,14 +15,18 @@ import os
 import re
 from typing import Any
 
+logger = __import__("logging").getLogger(__name__)
+
 
 class Reranker:
     """Re-ranks search result chunks by computing true query–chunk relevance.
 
-    Uses cross-encoder models or external rerank APIs. Falls back to a
-    heuristic word-overlap scorer when no model or API key is configured.
+    Uses FlagEmbedding (BAAI/bge-reranker-v2-m3) by default for free local
+    reranking. Falls back through sentence-transformers → API backends →
+    heuristic word-overlap scorer.
     """
 
+    BACKEND_FLAGEMBEDDING = "flagembedding"
     BACKEND_LOCAL = "local"
     BACKEND_COHERE = "cohere"
     BACKEND_JINA = "jina"
@@ -38,7 +43,7 @@ class Reranker:
         self.model = model or self.DEFAULT_MODEL
         self._top_k = top_k
         self._backend: str | None = backend
-        self._cross_encoder: Any = None  # lazy-loaded CrossEncoder instance
+        self._reranker: Any = None  # lazy-loaded FlagReranker or CrossEncoder
 
     # ── Public API ────────────────────────────────────────────
 
@@ -61,7 +66,13 @@ class Reranker:
         backend = self._resolve_backend()
         k = top_k if top_k is not None else self._top_k
 
-        if backend == self.BACKEND_LOCAL:
+        if backend == self.BACKEND_FLAGEMBEDDING:
+            try:
+                scores = self._rerank_flagembedding(query, chunks)
+            except Exception as e:
+                logger.warning("FlagEmbedding failed, falling back to heuristic: %s", e)
+                scores = self._rerank_heuristic(query, chunks)
+        elif backend == self.BACKEND_LOCAL:
             scores = await self._rerank_local(query, chunks)
         elif backend == self.BACKEND_COHERE:
             scores = await self._rerank_cohere(query, chunks)
@@ -70,13 +81,12 @@ class Reranker:
         else:
             scores = self._rerank_heuristic(query, chunks)
 
-        # Attach scores
+        # Attach scores — blend with prior signal
         for i, chunk in enumerate(chunks):
             prior = chunk.get("rerank_score", chunk.get("vector_score", 0))
             chunk["rerank_score"] = round(0.7 * scores[i] + 0.3 * prior, 6)
             chunk["_relevance_raw"] = round(scores[i], 6)
 
-        # Sort a copy so the caller's list order is preserved
         ranked = sorted(chunks, key=lambda c: c["rerank_score"], reverse=True)
         return ranked[:k]
 
@@ -87,17 +97,28 @@ class Reranker:
         if self._backend:
             return self._backend
 
-        # Check env-driven backends first
+        # Check env-driven API backends
         if os.getenv("COHERE_API_KEY"):
             return self.BACKEND_COHERE
         if os.getenv("JINA_API_KEY"):
             return self.BACKEND_JINA
 
-        # Try local cross-encoder
+        # Prefer FlagEmbedding (free, local, best BGE quality)
+        if self._can_use_flagembedding():
+            return self.BACKEND_FLAGEMBEDDING
+
+        # Fall back to sentence-transformers
         if self._can_use_local():
             return self.BACKEND_LOCAL
 
         return self.BACKEND_HEURISTIC
+
+    def _can_use_flagembedding(self) -> bool:
+        try:
+            from FlagEmbedding import FlagReranker  # noqa: F401
+            return True
+        except ImportError:
+            return False
 
     def _can_use_local(self) -> bool:
         try:
@@ -105,6 +126,62 @@ class Reranker:
             return True
         except ImportError:
             return False
+
+    # ── FlagEmbedding (primary local) ──────────────────────────
+
+    def _rerank_flagembedding(self, query: str, chunks: list[dict]) -> list[float]:
+        """Use BAAI FlagEmbedding FlagReranker — free, local, state-of-the-art."""
+        if self._reranker is None:
+            from FlagEmbedding import FlagReranker
+            try:
+                self._reranker = FlagReranker(
+                    self.model,
+                    use_fp16=True,
+                )
+            except Exception as e:
+                logger.warning(
+                    "FlagEmbedding model '%s' failed to load (huggingface.co may be unreachable): %s. "
+                    "Falling back to heuristic reranker.",
+                    self.model, e,
+                )
+                raise RuntimeError(f"FlagEmbedding unavailable: {e}") from e
+
+        documents = [c.get("content", "") for c in chunks]
+        pairs = [[query, doc] for doc in documents]
+        raw = self._reranker.compute_score(pairs, normalize=True)
+
+        scores = [float(s) for s in raw] if isinstance(raw, list) else [float(raw)]
+        return scores
+
+    # ── Local cross-encoder (fallback) ─────────────────────────
+
+    async def _rerank_local(self, query: str, chunks: list[dict]) -> list[float]:
+        """Use a sentence-transformers CrossEncoder model locally."""
+        if self._reranker is None:
+            from sentence_transformers import CrossEncoder
+            self._reranker = CrossEncoder(
+                self.model,
+                trust_remote_code=True,
+            )
+
+        documents = [c.get("content", "") for c in chunks]
+        pairs = [[query, doc] for doc in documents]
+
+        raw_scores = self._reranker.predict(
+            pairs,
+            batch_size=min(32, len(pairs)),
+            show_progress_bar=False,
+        )
+
+        scores = [float(s) for s in raw_scores]
+        if scores:
+            min_s, max_s = min(scores), max(scores)
+            if max_s > min_s:
+                scores = [(s - min_s) / (max_s - min_s) for s in scores]
+            else:
+                scores = [0.5] * len(scores)
+
+        return scores
 
     # ── Heuristic (zero-dependency) ────────────────────────────
 
@@ -124,14 +201,12 @@ class Reranker:
                 scores.append(0.0)
                 continue
 
-            # TF × IDF sum over query terms
             score = 0.0
             for term in query_terms:
                 tf = content_terms.count(term) / len(content_terms)
                 score += tf * idf.get(term, 0.0)
             scores.append(score)
 
-        # Normalize to [0, 1]
         max_s = max(scores) if scores else 1.0
         if max_s > 0:
             scores = [s / max_s for s in scores]
@@ -140,13 +215,11 @@ class Reranker:
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
-        """Lowercase + split on non-alphanumeric, drop short tokens."""
         tokens = re.split(r"[^a-zA-Z0-9一-鿿]+", text.lower())
         return [t for t in tokens if len(t) > 1]
 
     @staticmethod
     def _compute_idf(query_terms: list[str], chunks: list[dict]) -> dict[str, float]:
-        """IDF = log((N + 1) / (df + 1)) + 1 smoothing."""
         N = len(chunks)
         idf: dict[str, float] = {}
         for term in set(query_terms):
@@ -157,7 +230,6 @@ class Reranker:
     # ── Cohere API ─────────────────────────────────────────────
 
     async def _rerank_cohere(self, query: str, chunks: list[dict]) -> list[float]:
-        """Call Cohere Rerank API (https://docs.cohere.com/reference/rerank)."""
         import httpx
 
         api_key = os.getenv("COHERE_API_KEY", "")
@@ -180,7 +252,6 @@ class Reranker:
             response.raise_for_status()
             data = response.json()
 
-        # Build score array preserving original order
         score_map: dict[int, float] = {}
         for item in data.get("results", []):
             score_map[item["index"]] = item.get("relevance_score", 0.0)
@@ -189,7 +260,6 @@ class Reranker:
     # ── Jina API ───────────────────────────────────────────────
 
     async def _rerank_jina(self, query: str, chunks: list[dict]) -> list[float]:
-        """Call Jina Reranker API (https://jina.ai/reranker)."""
         import httpx
 
         api_key = os.getenv("JINA_API_KEY", "")
@@ -216,35 +286,3 @@ class Reranker:
         for item in data.get("results", []):
             score_map[item["index"]] = item.get("relevance_score", 0.0)
         return [score_map.get(i, 0.0) for i in range(len(chunks))]
-
-    # ── Local cross-encoder ────────────────────────────────────
-
-    async def _rerank_local(self, query: str, chunks: list[dict]) -> list[float]:
-        """Use a sentence-transformers CrossEncoder model locally."""
-        if self._cross_encoder is None:
-            from sentence_transformers import CrossEncoder
-            self._cross_encoder = CrossEncoder(
-                self.model,
-                trust_remote_code=True,
-            )
-
-        documents = [c.get("content", "") for c in chunks]
-        pairs = [[query, doc] for doc in documents]
-
-        # CrossEncoder.predict runs in a thread pool; call synchronously for simplicity
-        raw_scores = self._cross_encoder.predict(
-            pairs,
-            batch_size=min(32, len(pairs)),
-            show_progress_bar=False,
-        )
-
-        # Normalize sigmoid scores to [0, 1]
-        scores = [float(s) for s in raw_scores]
-        if scores:
-            min_s, max_s = min(scores), max(scores)
-            if max_s > min_s:
-                scores = [(s - min_s) / (max_s - min_s) for s in scores]
-            else:
-                scores = [0.5] * len(scores)
-
-        return scores

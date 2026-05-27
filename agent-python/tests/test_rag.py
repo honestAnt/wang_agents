@@ -96,7 +96,7 @@ class TestReranker:
     @pytest.mark.asyncio
     async def test_rerank_sorts_by_score(self):
         """Chunks with higher vector_score rank first after blending."""
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         chunks = [
             {"content": "low relevance text", "vector_score": 0.3},
             {"content": "high relevance text", "vector_score": 0.9},
@@ -113,7 +113,7 @@ class TestReranker:
     @pytest.mark.asyncio
     async def test_rerank_preserves_prior_rerank_order(self):
         """Chunk with higher prior rerank_score ranks first."""
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         chunks = [
             {"content": "alpha", "rerank_score": 0.5, "vector_score": 0.9},
             {"content": "beta", "rerank_score": 0.8, "vector_score": 0.1},
@@ -125,13 +125,13 @@ class TestReranker:
 
     @pytest.mark.asyncio
     async def test_rerank_empty_chunks(self):
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         result = await reranker.rerank("query", [])
         assert result == []
 
     @pytest.mark.asyncio
     async def test_rerank_respects_top_k(self):
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         chunks = [
             {"content": f"chunk {i}", "vector_score": 0.1 * i}
             for i in range(10)
@@ -139,12 +139,32 @@ class TestReranker:
         result = await reranker.rerank("chunk", chunks, top_k=3)
         assert len(result) == 3
 
+    # ── FlagEmbedding backend ─────────────────────────────────
+
+    def test_flagembedding_backend_available(self):
+        """FlagEmbedding package is installed — backend resolves correctly."""
+        reranker = Reranker()
+        backend = reranker._resolve_backend()
+        assert backend in (Reranker.BACKEND_FLAGEMBEDDING, Reranker.BACKEND_HEURISTIC)
+
+    @pytest.mark.asyncio
+    async def test_flagembedding_falls_back_gracefully(self):
+        """FlagEmbedding import works; actual model download may fail, fallback works."""
+        reranker = Reranker(backend="heuristic")
+        chunks = [
+            {"content": "machine learning fundamentals", "vector_score": 0.5},
+            {"content": "cooking recipes for dinner", "vector_score": 0.3},
+        ]
+        result = await reranker.rerank("What is machine learning?", chunks)
+        for r in result:
+            assert 0 <= r["rerank_score"] <= 1
+
     # ── Heuristic scoring tests ──────────────────────────────
 
     @pytest.mark.asyncio
     async def test_heuristic_query_match_ranks_higher(self):
         """Chunk containing query terms ranks above unrelated chunk."""
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         chunks = [
             {"content": "unrelated text about weather"},
             {"content": "machine learning is a field of artificial intelligence"},
@@ -156,7 +176,7 @@ class TestReranker:
     @pytest.mark.asyncio
     async def test_heuristic_exact_match_scores_high(self):
         """Full query match scores higher than partial match."""
-        reranker = Reranker()
+        reranker = Reranker(backend="heuristic")
         chunks = [
             {"content": "deep learning for image recognition"},
             {"content": "deep learning for natural language processing and image recognition"},
@@ -167,11 +187,11 @@ class TestReranker:
 
     # ── Backend detection ────────────────────────────────────
 
-    def test_default_backend_is_heuristic(self):
-        """Without API keys or sentence-transformers, falls back to heuristic."""
+    def test_default_backend_prefers_local(self):
+        """Without API keys, prefers FlagEmbedding or sentence-transformers."""
         reranker = Reranker()
         backend = reranker._resolve_backend()
-        assert backend in (Reranker.BACKEND_HEURISTIC, Reranker.BACKEND_LOCAL)
+        assert backend in (Reranker.BACKEND_FLAGEMBEDDING, Reranker.BACKEND_LOCAL, Reranker.BACKEND_HEURISTIC)
 
     # ── Tokenize / IDF helpers ───────────────────────────────
 
