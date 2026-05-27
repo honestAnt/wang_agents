@@ -11,11 +11,11 @@ import org.springframework.kafka.annotation.KafkaListener;
 import java.util.Map;
 
 /**
- * Observability configuration — OpenTelemetry + Langfuse integration.
+ * Observability configuration — OpenTelemetry + Jaeger OTLP.
  *
  * Span data flows:
  *   Python/Kafka → trace-service → PostgreSQL (trace_spans table)
- *                                 → Langfuse (LLM observability dashboard)
+ *                                 → Jaeger via OTLP gRPC (http://localhost:4317)
  *
  * OpenTelemetry auto-instrumentation is handled by the Java agent JAR
  * attached at container startup.
@@ -81,18 +81,17 @@ public class ObservabilityConfig {
     }
 
     @Bean
-    public LangfuseConfig langfuseConfig(
-            @Value("${langfuse.public-key:}") String publicKey,
-            @Value("${langfuse.secret-key:}") String secretKey,
-            @Value("${langfuse.host:https://cloud.langfuse.com}") String host) {
+    public JaegerConfig jaegerConfig(
+            @Value("${jaeger.endpoint:http://localhost:4317}") String endpoint,
+            @Value("${jaeger.service-name:trace-service}") String serviceName) {
 
-        if (publicKey != null && !publicKey.isBlank() && secretKey != null && !secretKey.isBlank()) {
-            log.info("Langfuse configured: host={}", host);
-            return new LangfuseConfig(publicKey, secretKey, host);
+        if (endpoint != null && !endpoint.isBlank()) {
+            log.info("Jaeger OTLP configured: endpoint={}, service={}", endpoint, serviceName);
+            return new JaegerConfig(endpoint, serviceName);
         }
 
-        log.info("Langfuse keys not set — LLM observability disabled");
-        return new LangfuseConfig("", "", "");
+        log.info("Jaeger endpoint not set — trace export disabled");
+        return new JaegerConfig("", "");
     }
 
     private void persistSpan(Map<String, Object> span) {
@@ -101,11 +100,11 @@ public class ObservabilityConfig {
     }
 
     /**
-     * Langfuse configuration holder.
+     * Jaeger OTLP configuration holder.
      */
-    public record LangfuseConfig(String publicKey, String secretKey, String host) {
+    public record JaegerConfig(String endpoint, String serviceName) {
         public boolean isEnabled() {
-            return publicKey != null && !publicKey.isBlank();
+            return endpoint != null && !endpoint.isBlank();
         }
     }
 }

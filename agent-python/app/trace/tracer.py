@@ -1,7 +1,8 @@
-"""Trace system — OpenTelemetry-based tracing with Langfuse integration.
+"""Trace system — OpenTelemetry-based tracing with Jaeger OTLP export.
 
-Exports spans to trace-service via Kafka. Falls back gracefully when
-Kafka is unavailable (traces are logged locally).
+Exports spans to Jaeger via OTLP gRPC (http://localhost:4317) and to
+trace-service via Kafka. Falls back gracefully when external services
+are unavailable (traces are logged locally).
 """
 
 import json
@@ -80,6 +81,63 @@ class Span:
         }
 
 
+class JaegerSpanExporter:
+    """Exports spans to Jaeger via OTLP gRPC."""
+
+    def __init__(self):
+        self._provider = None
+        self._tracer = None
+        self._jaeger_available = False
+        self._endpoint = os.getenv("JAEGER_ENDPOINT", os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"))
+        self._init_otlp()
+
+    def _init_otlp(self):
+        try:
+            from opentelemetry import trace as otel_trace
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+
+            resource = Resource.create({SERVICE_NAME: "agent-python-runtime"})
+            exporter = OTLPSpanExporter(endpoint=self._endpoint, insecure=True)
+            provider = TracerProvider(resource=resource)
+            provider.add_span_processor(BatchSpanProcessor(exporter))
+
+            self._provider = provider
+            self._tracer = provider.get_tracer("agent-python")
+            self._jaeger_available = True
+            logger.info("Jaeger OTLP exporter connected to %s", self._endpoint)
+        except ImportError:
+            logger.warning(
+                "opentelemetry-exporter-otlp not installed. "
+                "Install: pip install opentelemetry-exporter-otlp"
+            )
+        except Exception as e:
+            logger.warning("Jaeger OTLP unavailable at %s: %s", self._endpoint, e)
+
+    def export(self, span_dict: dict) -> None:
+        if not self._jaeger_available or not self._tracer:
+            return
+        try:
+            from opentelemetry import trace as otel_trace
+            from opentelemetry.trace import Status, StatusCode
+
+            with self._tracer.start_as_current_span(
+                span_dict["name"],
+                kind=otel_trace.SpanKind.INTERNAL,
+            ) as otel_span:
+                otel_span.set_attribute("span.type", span_dict.get("type", "agent"))
+                otel_span.set_attribute("latency_ms", span_dict.get("latency_ms", 0))
+                for key, value in span_dict.get("attributes", {}).items():
+                    otel_span.set_attribute(key, value)
+                status = span_dict.get("status", "ok")
+                if status == "error":
+                    otel_span.set_status(Status(StatusCode.ERROR))
+        except Exception as e:
+            logger.debug("Failed to export span to Jaeger: %s", e)
+
+
 class KafkaSpanExporter:
     """Exports spans to trace-service via Kafka topic 'trace.spans'."""
 
@@ -116,11 +174,12 @@ class KafkaSpanExporter:
 
 
 class Tracer:
-    """Tracer that exports spans via Kafka backed by in-process buffering."""
+    """Tracer that exports spans to Jaeger + Kafka, with local log fallback."""
 
     def __init__(self):
         self._spans: list[Span] = []
-        self._exporter = KafkaSpanExporter()
+        self._jaeger = JaegerSpanExporter()
+        self._kafka = KafkaSpanExporter()
 
     @contextmanager
     def start_span(self, name: str, span_type: str = "agent", trace_id: str | None = None, parent_id: str | None = None):
@@ -133,7 +192,9 @@ class Tracer:
             raise
         finally:
             span.end()
-            self._exporter.export(span.to_dict())
+            span_data = span.to_dict()
+            self._jaeger.export(span_data)
+            self._kafka.export(span_data)
 
     @property
     def current_span_id(self) -> str | None:
@@ -146,5 +207,5 @@ tracer = Tracer()
 
 
 def init_tracer() -> None:
-    """Initialize the tracer — connect to OpenTelemetry collector and Kafka."""
+    """Initialize the tracer — connect to Jaeger OTLP collector and Kafka."""
     pass
