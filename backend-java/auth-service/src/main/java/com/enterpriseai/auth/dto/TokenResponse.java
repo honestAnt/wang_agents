@@ -25,4 +25,12 @@ public class TokenResponse {
     private long refreshExpiresIn;
 
     private String scope;
+
+    private String tenantId;
+
+    private String username;
+
+    private String email;
+
+    private String displayName;
 }

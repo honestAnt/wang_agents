@@ -1,0 +1,143 @@
+<settings>
+    <localRepository>${user.home}/.m2/repository</localRepository>
+    <!-- omitted xml -->
+    <servers>
+        <!--        <server>-->
+        <!--            <id>megarobo-biolauto-biolauto-server-maven-mirror</id>-->
+        <!--            <username>maven-mirror-1715571875116</username>-->
+        <!--            <password>2253d68f899b809c084e901a3a102b55d68d2f3e</password>-->
+        <!--        </server>-->
+        <!--        <server>-->
+        <!--            <id>megarobo-biolauto-biolauto-server-biolauto-maven</id>-->
+        <!--            <username>biolauto-maven-1713878155985</username>-->
+        <!--            <password>eab231b981f7433088cd489c7a9c1c99101edebe</password>-->
+        <!--        </server>-->
+        <!--        <server>-->
+        <!--            <id>megarobo-biolauto-flux-maven-flux-maven</id>-->
+        <!--            <username>flux-maven-1719394718718</username>-->
+        <!--            <password>13984e46b4f6cbbed7aa625350236df60d857fc8</password>-->
+        <!--        </server>-->
+        <server>
+            <id>yunxiao-maven-mirror</id>
+            <username>67d7f978a175e4b5e3d7a38a</username>
+            <password>g1eHzULOc2RM</password>
+        </server>
+        <server>
+            <id>yunxiao-flux-maven</id>
+            <username>67d7f978a175e4b5e3d7a38a</username>
+            <password>g1eHzULOc2RM</password>
+        </server>
+        <server>
+            <id>yunxiao-biolauto-maven</id>
+            <username>67d7f978a175e4b5e3d7a38a</username>
+            <password>yiJudK8]N8CG</password>
+        </server>
+    </servers>
+    <mirrors>
+        <mirror>
+            <id>aliyun</id>
+            <name>aliyun</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <mirrorOf>*,,!snapshots,!ebiUniprotPublic,!yunxiao-flux-maven,!yunxiao-maven-mirror,!yunxiao-biolauto-maven</mirrorOf>
+        </mirror>
+    </mirrors>
+
+
+    <profiles>
+        <profile>
+            <id>rdc</id>
+            <properties>
+
+                <altReleaseDeploymentRepository>
+                    maven-mirror::default::https://packages.aliyun.com/68a822aa479007fe862e20e5/maven/maven-mirror
+                </altReleaseDeploymentRepository>
+
+
+                <altSnapshotDeploymentRepository>
+                    maven-mirror::default::https://packages.aliyun.com/68a822aa479007fe862e20e5/maven/maven-mirror
+                </altSnapshotDeploymentRepository>
+
+            </properties>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>snapshots</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>maven-mirror</id>
+                    <url>https://packages.aliyun.com/68a822aa479007fe862e20e5/maven/maven-mirror</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>snapshots</id>
+                    <url>https://maven.aliyun.com/nexus/content/groups/public</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>maven-mirror</id>
+                    <url>https://packages.aliyun.com/68a822aa479007fe862e20e5/maven/maven-mirror</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>rdc</activeProfile>
+    </activeProfiles>
+    <!--    <mirrors>-->
+    <!--        <mirror>-->
+    <!--            <id>yunxiao-flux-maven</id>-->
+    <!--            <name>flux-maven</name>-->
+    <!--            <url>https://packages.aliyun.com/68a822aa479007fe862e20e5/maven/flux-maven</url>-->
+    <!--            &lt;!&ndash;                    <id>aliyunmaven</id>&ndash;&gt;-->
+    <!--            <mirrorOf>*</mirrorOf>-->
+    <!--            &lt;!&ndash;                    <name>阿里云公共仓库</name>&ndash;&gt;-->
+    <!--            &lt;!&ndash;                    <url>https://maven.aliyun.com/repository/public</url>&ndash;&gt;-->
+    <!--        </mirror>-->
+
+    <!--    </mirrors>-->
+
+</settings>

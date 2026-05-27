@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS security_alerts (
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_alerts_tenant ON security_alerts(tenant_id);
-CREATE INDEX idx_alerts_resolved ON security_alerts(resolved);
+CREATE INDEX idx_security_alerts_tenant ON security_alerts(tenant_id);
+CREATE INDEX idx_security_alerts_resolved ON security_alerts(resolved);
 CREATE INDEX idx_alerts_severity ON security_alerts(severity);
 
 CREATE TABLE IF NOT EXISTS ip_block_rules (

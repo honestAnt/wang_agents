@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 9090
 
 spring:
   application:
@@ -8,8 +8,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/enterprise-ai-platform}
-          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/enterprise-ai-platform/protocol/openid-connect/certs}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/wang-agent}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/wang-agent/protocol/openid-connect/certs}
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/wang_agent}
@@ -29,6 +29,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    out-of-order: true
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

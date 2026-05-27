@@ -6,6 +6,8 @@ import com.enterpriseai.auth.dto.UserProfile;
 import com.enterpriseai.common.api.ApiResponse;
 import com.enterpriseai.common.auth.SecurityContextHolder;
 import com.enterpriseai.common.exception.BusinessException;
+import com.enterpriseai.user.entity.User;
+import com.enterpriseai.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -36,21 +38,23 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final RestTemplate restTemplate;
+    private final UserService userService;
 
-    @Value("${keycloak.realm:enterprise-ai}")
+    @Value("${keycloak.realm:wang-agent}")
     private String realm;
 
     @Value("${keycloak.client-id:enterprise-ai-client}")
     private String clientId;
 
-    @Value("${keycloak.client-secret:}")
+    @Value("${keycloak.client-secret:FFQvKPO9bQKBwkNuYlI6gkYiYvNa3clO}")
     private String clientSecret;
 
     @Value("${keycloak.auth-server-url:http://localhost:8080}")
     private String keycloakUrl;
 
-    public AuthController(RestTemplateBuilder restTemplateBuilder) {
+    public AuthController(RestTemplateBuilder restTemplateBuilder, UserService userService) {
         this.restTemplate = restTemplateBuilder.build();
+        this.userService = userService;
     }
 
     private String tokenEndpoint() {
@@ -94,6 +98,17 @@ public class AuthController {
                     .refreshExpiresIn(((Number) tokenResponse.getOrDefault("refresh_expires_in", 1800)).intValue())
                     .scope((String) tokenResponse.getOrDefault("scope", "openid"))
                     .build();
+
+            // Look up user in local database to get tenant_id
+            try {
+                User user = userService.getByUsername(request.getUsername());
+                token.setTenantId(user.getTenantId());
+                token.setUsername(user.getUsername());
+                token.setEmail(user.getEmail());
+                token.setDisplayName(user.getDisplayName());
+            } catch (Exception e) {
+                log.warn("User '{}' not found in local database, tenant_id will be empty", request.getUsername());
+            }
 
             return ApiResponse.ok(token);
         } catch (RestClientException e) {

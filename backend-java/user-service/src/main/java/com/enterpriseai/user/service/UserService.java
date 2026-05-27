@@ -29,6 +29,11 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found: " + id));
     }
 
+    public User getByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+    }
+
     public User create(String tenantId, String username, String email,
                        String displayName, String departmentId) {
         User user = new User();

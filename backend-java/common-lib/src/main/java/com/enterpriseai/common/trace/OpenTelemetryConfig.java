@@ -60,7 +60,7 @@ public class OpenTelemetryConfig {
         OpenTelemetry otel = OpenTelemetrySdk.builder()
                 .setTracerProvider(tracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-                .buildAndRegisterGlobal();
+                .build();
 
         log.info("OpenTelemetry initialized: service={}, endpoint={}", svc, endpoint);
         return otel;
